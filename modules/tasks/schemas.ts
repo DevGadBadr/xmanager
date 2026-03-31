@@ -1,0 +1,25 @@
+import { z } from "zod";
+
+export const taskSchema = z.object({
+  projectId: z.string().cuid(),
+  title: z.string().min(2).max(140),
+  description: z.string().max(1000).optional().or(z.literal("")),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  assigneeMembershipId: z.string().cuid().optional().or(z.literal("")),
+  startDate: z.string().optional().or(z.literal("")),
+  dueDate: z.string().optional().or(z.literal("")),
+});
+
+export const taskUpdateSchema = z.object({
+  taskId: z.string().cuid(),
+  status: z.enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"]),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  assigneeMembershipId: z.string().cuid().optional().or(z.literal("")),
+  startDate: z.string().optional().or(z.literal("")),
+  dueDate: z.string().optional().or(z.literal("")),
+});
+
+export const taskCommentSchema = z.object({
+  taskId: z.string().cuid(),
+  body: z.string().min(1).max(1000),
+});

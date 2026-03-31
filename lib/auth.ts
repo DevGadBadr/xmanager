@@ -1,0 +1,173 @@
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { type NextAuthOptions, getServerSession } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+
+import { db } from "@/lib/db";
+import { ensureAppPath, resolveAuthUrl, resolveRedirectUrl } from "@/lib/auth-path";
+import { verifyPassword } from "@/lib/password";
+import {
+  bootstrapPrimaryOwner,
+  isPrimaryOwnerEmail,
+  repairPrimaryOwnerAccountCollision,
+} from "@/modules/auth/bootstrap";
+import { credentialsSignInSchema } from "@/modules/auth/schemas";
+
+const authUrl = resolveAuthUrl(process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? process.env.APP_URL);
+
+if (authUrl) {
+  process.env.AUTH_URL = authUrl;
+  process.env.NEXTAUTH_URL = authUrl;
+  process.env.NEXTAUTH_URL_INTERNAL ??= authUrl;
+}
+
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(db),
+  secret: process.env.AUTH_SECRET ?? "dev-auth-secret",
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: ensureAppPath("/auth/signin"),
+    error: ensureAppPath("/auth/error"),
+  },
+  providers: [
+    CredentialsProvider({
+      name: "Email",
+      credentials: {
+        email: {
+          label: "Email",
+          type: "email",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+        },
+      },
+      async authorize(credentials) {
+        const parsed = credentialsSignInSchema.safeParse(credentials);
+
+        if (!parsed.success) {
+          return null;
+        }
+
+        const email = parsed.data.email.trim().toLowerCase();
+        const user = await db.user.findUnique({
+          where: {
+            email,
+          },
+          include: {
+            memberships: {
+              where: {
+                isArchived: false,
+                status: "ACTIVE",
+                workspace: {
+                  isArchived: false,
+                },
+              },
+              take: 1,
+            },
+          },
+        });
+
+        if (!user?.passwordHash) {
+          return null;
+        }
+
+        const passwordMatches = await verifyPassword(parsed.data.password, user.passwordHash);
+
+        if (!passwordMatches || user.memberships.length === 0) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        };
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "google-client-id",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "google-client-secret",
+      allowDangerousEmailAccountLinking: false,
+    }),
+  ],
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      return resolveRedirectUrl(url, baseUrl);
+    },
+    async signIn({ user, account, profile }) {
+      const email = user.email?.trim().toLowerCase();
+
+      if (!email || !account) {
+        return false;
+      }
+
+      if (account.provider === "credentials") {
+        return true;
+      }
+
+      if (isPrimaryOwnerEmail(email)) {
+        await repairPrimaryOwnerAccountCollision({
+          account,
+          profile: profile ?? undefined,
+          email,
+        });
+
+        return true;
+      }
+
+      const now = new Date();
+      const [membership, invitation] = await Promise.all([
+        db.membership.findFirst({
+          where: {
+            isArchived: false,
+            user: {
+              email,
+            },
+            workspace: {
+              isArchived: false,
+            },
+          },
+        }),
+        db.invitation.findFirst({
+          where: {
+            email,
+            status: "PENDING",
+            expiresAt: {
+              gt: now,
+            },
+          },
+        }),
+      ]);
+
+      return Boolean(membership || invitation);
+    },
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+        await bootstrapPrimaryOwner({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        });
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && typeof token.id === "string") {
+        session.user.id = token.id;
+      }
+
+      return session;
+    },
+  },
+};
+
+export function auth() {
+  return getServerSession(authOptions);
+}

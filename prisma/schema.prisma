@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  TEAM_MANAGER
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum FolderScope {
+  PROJECT
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  INVITE
+  TEAM_ASSIGNMENT
+  TASK_ASSIGNMENT
+  TASK_REASSIGNMENT
+  COMMENT
+  WELCOME
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum ActivityEntityType {
+  WORKSPACE
+  TEAM
+  MEMBERSHIP
+  INVITATION
+  PROJECT
+  TASK
+  COMMENT
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  ARCHIVED
+  INVITED
+  ACCEPTED
+  ASSIGNED
+  UNASSIGNED
+  COMMENTED
+  ROLE_CHANGED
+  STATUS_CHANGED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  name          String?
+  image         String?
+  fullName      String?
+  title         String?
+  department    String?
+  lastActiveAt  DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  memberships   Membership[]
+  notifications Notification[]
+  activities    ActivityLog[]  @relation("ActivityActor")
+  ownedWorkspaces Workspace[]  @relation("WorkspaceOwner")
+  sessions      Session[]
+}
+
+model Workspace {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  logoUrl       String?
+  ownerUserId   String
+  isArchived    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  owner         User           @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  memberships   Membership[]
+  teams         Team[]
+  invitations   Invitation[]
+  folders       Folder[]
+  projects      Project[]
+  tasks         Task[]
+  notifications Notification[]
+  activities    ActivityLog[]
+
+  @@index([ownerUserId])
+  @@index([isArchived])
+}
+
+model Membership {
+  id                String          @id @default(cuid())
+  workspaceId       String
+  userId            String
+  role              Role
+  status            MembershipStatus @default(ACTIVE)
+  joinedAt          DateTime        @default(now())
+  isArchived        Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamLinks         TeamMember[]
+  managedTeams      Team[]          @relation("TeamManager")
+  invitedRecords    Invitation[]    @relation("InvitedByMembership")
+  acceptedInvites   Invitation[]    @relation("AcceptedByMembership")
+  ownedProjects     Project[]       @relation("ProjectOwner")
+  projectMembers    ProjectMember[]
+  createdTasks      Task[]          @relation("TaskCreator")
+  reportedTasks     Task[]          @relation("TaskReporter")
+  assignedTasks     Task[]          @relation("TaskAssignee")
+  comments          TaskComment[]
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId, role])
+  @@index([userId])
+}
+
+model Team {
+  id                  String       @id @default(cuid())
+  workspaceId         String
+  name                String
+  description         String?
+  managerMembershipId String?
+  isArchived          Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  workspace           Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  manager             Membership?  @relation("TeamManager", fields: [managerMembershipId], references: [id], onDelete: SetNull)
+  members             TeamMember[]
+  invitations         Invitation[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@index([managerMembershipId])
+}
+
+model Folder {
+  id             String      @id @default(cuid())
+  workspaceId     String
+  name           String
+  scope          FolderScope
+  parentFolderId String?
+  sortOrder      Int         @default(0)
+  isArchived     Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent         Folder?     @relation("FolderHierarchy", fields: [parentFolderId], references: [id], onDelete: SetNull)
+  children       Folder[]    @relation("FolderHierarchy")
+  projects       Project[]
+
+  @@index([workspaceId, scope, parentFolderId])
+  @@index([parentFolderId])
+}
+
+model TeamMember {
+  id           String     @id @default(cuid())
+  teamId        String
+  membershipId  String
+  joinedAt      DateTime   @default(now())
+  team          Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  membership    Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, membershipId])
+  @@index([membershipId])
+}
+
+model Invitation {
+  id                    String           @id @default(cuid())
+  workspaceId           String
+  email                 String
+  role                  Role
+  teamId                String?
+  tokenHash             String           @unique
+  expiresAt             DateTime
+  acceptedAt            DateTime?
+  status                InvitationStatus @default(PENDING)
+  invitedByMembershipId String
+  acceptedByMembershipId String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  workspace             Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  team                  Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  invitedBy             Membership       @relation("InvitedByMembership", fields: [invitedByMembershipId], references: [id], onDelete: Restrict)
+  acceptedBy            Membership?      @relation("AcceptedByMembership", fields: [acceptedByMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, email])
+  @@index([expiresAt])
+  @@index([status])
+}
+
+model Project {
+  id                 String        @id @default(cuid())
+  workspaceId        String
+  folderId           String?
+  name               String
+  key                String
+  description        String?
+  status             ProjectStatus @default(PLANNING)
+  ownerMembershipId  String
+  startDate          DateTime?
+  dueDate            DateTime?
+  isArchived         Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  workspace          Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder             Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  owner              Membership    @relation("ProjectOwner", fields: [ownerMembershipId], references: [id], onDelete: Restrict)
+  members            ProjectMember[]
+  tasks              Task[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId, status])
+  @@index([folderId])
+}
+
+model ProjectMember {
+  id           String     @id @default(cuid())
+  projectId     String
+  membershipId  String
+  addedAt       DateTime   @default(now())
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  membership    Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, membershipId])
+  @@index([membershipId])
+}
+
+model Task {
+  id                  String        @id @default(cuid())
+  workspaceId         String
+  projectId           String
+  title               String
+  description         String?
+  status              TaskStatus    @default(TODO)
+  priority            TaskPriority  @default(MEDIUM)
+  assigneeMembershipId String?
+  creatorMembershipId String
+  reporterMembershipId String?
+  dueDate             DateTime?
+  startDate           DateTime?
+  completedAt         DateTime?
+  position            Int           @default(0)
+  isArchived          Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project             Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee            Membership?   @relation("TaskAssignee", fields: [assigneeMembershipId], references: [id], onDelete: SetNull)
+  creator             Membership    @relation("TaskCreator", fields: [creatorMembershipId], references: [id], onDelete: Restrict)
+  reporter            Membership?   @relation("TaskReporter", fields: [reporterMembershipId], references: [id], onDelete: SetNull)
+  comments            TaskComment[]
+
+  @@index([projectId, status])
+  @@index([assigneeMembershipId, status])
+  @@index([workspaceId, dueDate])
+}
+
+model TaskComment {
+  id                 String     @id @default(cuid())
+  taskId             String
+  authorMembershipId String
+  body               String
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  task               Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author             Membership @relation(fields: [authorMembershipId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  workspaceId String
+  userId      String
+  type        NotificationType
+  channel     NotificationChannel
+  title       String
+  body        String
+  link        String?
+  readAt      DateTime?
+  sentAt      DateTime?
+  payload     Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([workspaceId, createdAt])
+}
+
+model ActivityLog {
+  id          String             @id @default(cuid())
+  workspaceId String
+  actorUserId String?
+  entityType  ActivityEntityType
+  entityId    String
+  action      ActivityAction
+  message     String
+  metadata    Json?
+  createdAt   DateTime           @default(now())
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       User?              @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
