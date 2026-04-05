@@ -6,11 +6,14 @@ import { Plus } from "lucide-react";
 import { TaskForm } from "@/components/forms/task-form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export function CreateTaskDialog({
+  className,
   memberships,
   projectId,
 }: {
+  className?: string;
   memberships: Array<{ id: string; user: { fullName: string | null; email: string } }>;
   projectId: string;
 }) {
@@ -19,7 +22,7 @@ export function CreateTaskDialog({
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" type="button">
+        <Button className={cn(className)} size="sm" type="button">
           <Plus className="h-3.5 w-3.5" />
           Add task
         </Button>

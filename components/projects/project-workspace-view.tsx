@@ -1,7 +1,7 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { LayoutGrid, Rows3 } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { LayoutGrid, Rows3, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { DeleteTaskButton } from "@/components/forms/delete-task-button";
@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { WorkspaceFilterBar } from "@/components/workspace/filter-bar";
+import { Input } from "@/components/ui/input";
 import { cn, formatDate } from "@/lib/utils";
 
 type AssigneeOption = {
@@ -129,10 +129,13 @@ export function ProjectWorkspaceView({
 }) {
   const pathname = usePathname();
   const [storedFilters, setStoredFilters] = useState<StoredProjectFilters>(DEFAULT_PROJECT_FILTERS);
+  const [expandedSearchProjectId, setExpandedSearchProjectId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const search = storedFilters.search;
   const viewMode = storedFilters.viewMode;
   const activeQuickFilter = storedFilters.activeQuickFilter;
   const deferredSearch = useDeferredValue(search);
+  const isSearchOpen = Boolean(search) || expandedSearchProjectId === selectedProjectId;
 
   useEffect(() => {
     const syncFromStorage = () => {
@@ -148,6 +151,20 @@ export function ProjectWorkspaceView({
       window.removeEventListener(PROJECT_FILTERS_STORAGE_EVENT, syncFromStorage);
     };
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!isSearchOpen) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [isSearchOpen]);
 
   const assigneeLabelById = useMemo(
     () => new Map(assignees.map((assignee) => [assignee.id, assignee.label])),
@@ -217,6 +234,16 @@ export function ProjectWorkspaceView({
     }));
   };
 
+  const toggleSearch = () => {
+    if (isSearchOpen) {
+      setExpandedSearchProjectId(null);
+      setSearch("");
+      return;
+    }
+
+    setExpandedSearchProjectId(selectedProjectId);
+  };
+
   const setViewMode = (nextViewMode: ViewMode) => {
     setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
       ...current,
@@ -242,11 +269,11 @@ export function ProjectWorkspaceView({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 xl:grid xl:h-full xl:grid-rows-[auto_auto_minmax(0,1fr)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[auto_auto_minmax(0,1fr)]">
       <div className="rounded-2xl border border-zinc-200 bg-white px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:px-3.5">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between xl:items-center">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4 xl:items-center">
               <div>
                 <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-400">
                   Project
@@ -254,23 +281,25 @@ export function ProjectWorkspaceView({
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4 xl:items-center">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center">
                       <DropdownMenu>
-                        <h1 className="min-w-0 text-xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-2xl">
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              aria-label="Choose project"
-                              className="max-w-full truncate rounded-lg text-left transition hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:hover:text-sky-300"
-                              type="button"
-                            >
-                              <span className="truncate">
-                                {projectName}
-                              </span>
-                            </button>
-                          </DropdownMenuTrigger>
-                        </h1>
+                        <div className="flex min-w-0 flex-1 items-center">
+                          <h1 className="min-w-0 text-xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-2xl">
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                aria-label="Choose project"
+                                className="max-w-full truncate rounded-lg text-left transition hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:hover:text-sky-300"
+                                type="button"
+                              >
+                                <span className="truncate">
+                                  {projectName}
+                                </span>
+                              </button>
+                            </DropdownMenuTrigger>
+                          </h1>
+                        </div>
                         <DropdownMenuContent align="start" className="max-h-[22rem] w-[22rem] overflow-y-auto">
                           {projects.map((project) => (
                             <DropdownMenuItem asChild key={project.id}>
@@ -301,7 +330,46 @@ export function ProjectWorkspaceView({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 xl:max-w-[52%] xl:justify-end">
+                  <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        aria-controls="project-task-search"
+                        aria-expanded={isSearchOpen}
+                        aria-label={isSearchOpen ? "Close task search" : "Open task search"}
+                        className="h-8 w-8 shrink-0 rounded-full"
+                        onClick={toggleSearch}
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                      >
+                        {isSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+                      </Button>
+                      <div
+                        aria-hidden={!isSearchOpen}
+                        className={cn(
+                          "min-w-0 overflow-hidden transition-[width,opacity,transform] duration-300 ease-out",
+                          isSearchOpen
+                            ? "w-[8.5rem] origin-left scale-x-100 opacity-100 sm:w-[10rem] lg:w-[12rem]"
+                            : "pointer-events-none w-0 origin-left scale-x-95 opacity-0",
+                        )}
+                      >
+                        <Input
+                          id="project-task-search"
+                          ref={searchInputRef}
+                          className="h-8 w-full"
+                          onChange={(event) => setSearch(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                              toggleSearch();
+                            }
+                          }}
+                          placeholder="Search tasks"
+                          tabIndex={isSearchOpen ? 0 : -1}
+                          type="search"
+                          value={search}
+                        />
+                      </div>
+                    </div>
                     <MetricChip label="Open tasks" value={String(openTaskCount)} />
                     <MetricChip label="Members" value={String(assignees.length)} />
                     <MetricChip label="Owner" value={ownerLabel} />
@@ -320,7 +388,7 @@ export function ProjectWorkspaceView({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:flex-none">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:flex-none">
             <div className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-950/60">
               <Button
                 className="h-8 px-2.5"
@@ -343,21 +411,31 @@ export function ProjectWorkspaceView({
                 Board
               </Button>
             </div>
-            <CreateTaskDialog memberships={memberships} projectId={selectedProjectId} />
+            <CreateTaskDialog className="w-full justify-center sm:w-auto" memberships={memberships} projectId={selectedProjectId} />
           </div>
         </div>
-      </div>
 
-      <WorkspaceFilterBar
-        activeFilterLabel={activeFilterLabel}
-        onClearFilter={clearQuickFilter}
-        onSearchChange={setSearch}
-        search={search}
-      />
+        {activeFilterLabel ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+            <div className="flex min-h-8 items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                Quick filter
+              </span>
+              <Badge className="px-2.5 py-1 text-[10px]" variant="default">
+                {activeFilterLabel}
+              </Badge>
+            </div>
+
+            <Button className="h-8 px-2.5 text-xs" onClick={clearQuickFilter} type="button" variant="ghost">
+              Clear
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       {visibleTasks.length > 0 ? (
         viewMode === "board" ? (
-          <div className="min-h-0 overflow-hidden xl:h-full">
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden xl:h-full">
             <ProjectTaskBoard
               activeQuickFilter={activeQuickFilter}
               canManageTasks={canManageTasks}
@@ -495,12 +573,12 @@ function ProjectTaskBoard({
     <div
       aria-busy={isBusy}
       className={cn(
-        "grid h-full min-h-0 grid-cols-1 gap-3 md:grid-cols-2 xl:auto-rows-fr xl:grid-cols-4",
+        "grid h-full min-h-0 min-w-0 w-full flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:auto-rows-fr xl:grid-cols-4",
         isBusy && "pointer-events-none opacity-70",
       )}
     >
       {columns.map((column) => (
-        <Card className="flex h-full min-h-[26rem] flex-col overflow-hidden xl:min-h-0" key={column.id}>
+        <Card className="flex h-full min-h-[26rem] min-w-0 flex-col overflow-hidden xl:min-h-0" key={column.id}>
           <CardHeader className="border-b border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-sm sm:text-base">{column.title}</CardTitle>

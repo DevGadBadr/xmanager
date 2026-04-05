@@ -89,16 +89,16 @@ export async function ProjectsWorkspace({
               <CreateProjectDialog />
             </div>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>Projects</CardTitle>
                 <Badge variant="neutral">{explorer.projects.length}</Badge>
               </CardHeader>
               <CardContent className="space-y-2.5">
                 {explorer.projects.map((project) => (
-                  <div className="flex items-center gap-2" key={project.id}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center" key={project.id}>
                     <PendingLink
                       busyMessage="Loading project..."
-                      className="flex flex-1 items-center justify-between gap-3 rounded-xl border border-zinc-200 px-3.5 py-3 transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-zinc-800 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10"
+                      className="flex flex-1 items-start justify-between gap-3 rounded-xl border border-zinc-200 px-3.5 py-3 transition hover:border-sky-200 hover:bg-sky-50/60 sm:items-center dark:border-zinc-800 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10"
                       href={`/projects/${project.id}`}
                     >
                       <div className="min-w-0">
@@ -116,10 +116,12 @@ export async function ProjectsWorkspace({
                           {project.openTaskCount ?? project.taskCount ?? 0} open tasks
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Open</span>
+                      <span className="shrink-0 pt-0.5 text-xs font-medium text-zinc-400 sm:pt-0 dark:text-zinc-500">Open</span>
                     </PendingLink>
                     {project.ownerMembershipId === membership.id || membership.role === "OWNER" || membership.role === "ADMIN" ? (
-                      <DeleteProjectButton projectId={project.id} projectName={project.name} />
+                      <div className="self-end sm:self-auto">
+                        <DeleteProjectButton projectId={project.id} projectName={project.name} />
+                      </div>
                     ) : null}
                   </div>
                 ))}

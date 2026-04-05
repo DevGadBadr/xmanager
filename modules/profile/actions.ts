@@ -106,7 +106,7 @@ export async function uploadAvatarAction(
 
     return {
       status: "success",
-      message: "Avatar uploaded.",
+      message: `${file.name || "Avatar"} uploaded and applied.`,
     };
   } catch (error) {
     return {

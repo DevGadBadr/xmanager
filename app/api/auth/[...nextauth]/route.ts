@@ -1,7 +1,5 @@
 import type { NextRequest } from "next/server";
-import type { AuthAction } from "../../../../node_modules/next-auth/core/types";
-import { AuthHandler } from "../../../../node_modules/next-auth/core/index.js";
-import { getBody, toResponse } from "../../../../node_modules/next-auth/next/utils.js";
+import NextAuth from "next-auth/next";
 import { getToken } from "next-auth/jwt";
 
 import { createAuthOptions } from "@/lib/auth";
@@ -26,41 +24,11 @@ async function handleAuth(
   request: NextRequest,
   context: { params: Promise<{ nextauth: string[] }> },
 ) {
-  const nextauth = (await context.params).nextauth;
-  const query = Object.fromEntries(request.nextUrl.searchParams);
-  const origin = getCanonicalAuthUrl(request);
-  const body = await getBody(request);
+  getCanonicalAuthUrl(request);
   const token = await getToken({ req: request });
   const currentUserId =
     typeof token?.id === "string" ? token.id : typeof token?.sub === "string" ? token.sub : null;
-  const internalResponse = await AuthHandler({
-    options: createAuthOptions({ currentUserId }),
-    req: {
-      body,
-      query,
-      cookies: Object.fromEntries(request.cookies.getAll().map((cookie) => [cookie.name, cookie.value])),
-      headers: Object.fromEntries(request.headers),
-      method: request.method,
-      action: nextauth?.[0] as AuthAction,
-      providerId: nextauth?.[1],
-      error: query.error ?? nextauth?.[1],
-      origin,
-    },
-  });
-  const response = toResponse(internalResponse);
-  const redirect = response.headers.get("Location");
-
-  if (body?.json === "true" && redirect) {
-    response.headers.delete("Location");
-    response.headers.set("Content-Type", "application/json");
-
-    return new Response(JSON.stringify({ url: redirect }), {
-      status: internalResponse.status,
-      headers: response.headers,
-    });
-  }
-
-  return response;
+  return NextAuth(request, context, createAuthOptions({ currentUserId }));
 }
 
 export async function GET(

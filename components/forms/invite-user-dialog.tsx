@@ -63,7 +63,7 @@ export function InviteUserDialog({
         <DialogHeader>
           <DialogTitle>Invite a workspace member</DialogTitle>
           <DialogDescription>
-            Invitations are locked to the invited email. Users can sign up with email first and optionally use Google later with the same address.
+            Invitations are locked to the invited email. Users can sign up with email first and optionally link Google later from their profile.
           </DialogDescription>
         </DialogHeader>
         <form

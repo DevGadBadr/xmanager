@@ -26,8 +26,8 @@ export default async function SignInPage({
         <CardHeader className="space-y-3">
           <CardTitle>Sign in to XManager</CardTitle>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Use the invited email and password you created from your workspace invite. Google stays
-            available as an optional same-email sign-in method.
+            Use the email and password you created from your workspace invite, or sign in with a
+            Google account you already linked from your profile.
           </p>
         </CardHeader>
         <CardContent className="space-y-5">

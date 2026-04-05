@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, PanelLeftOpen, UserRound } from "lucide-react";
+import { PanelLeftOpen, UserRound } from "lucide-react";
 
+import { NotificationMenu } from "@/components/layout/notification-menu";
 import { PendingLink } from "@/components/shared/pending-link";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,10 +18,20 @@ import { SignOutButton } from "@/components/shared/sign-out-button";
 import { getInitials, resolveAppAssetUrl } from "@/lib/utils";
 
 export function AppTopbar({
+  notifications,
   unreadCount,
   user,
   onOpenSidebar,
 }: {
+  notifications: {
+    id: string;
+    title: string;
+    body: string;
+    createdAt: Date;
+    readAt: Date | null;
+    type: string;
+    link: string | null;
+  }[];
   unreadCount: number;
   user: {
     fullName?: string | null;
@@ -81,18 +92,7 @@ export function AppTopbar({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <PendingLink
-          busyMessage="Opening notifications..."
-          className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
-          href="/notifications"
-        >
-          <Bell className="h-3 w-3" />
-          {unreadCount > 0 ? (
-            <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
-              {unreadCount}
-            </span>
-          ) : null}
-        </PendingLink>
+        <NotificationMenu items={notifications} unreadCount={unreadCount} />
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

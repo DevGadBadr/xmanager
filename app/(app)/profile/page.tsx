@@ -12,17 +12,10 @@ function getInitialFeedback(searchParams: { error?: string; google?: string }) {
     };
   }
 
-  if (searchParams.error === "google-email-mismatch") {
-    return {
-      kind: "error" as const,
-      message: "That Google account uses a different email. Link only the exact invited email.",
-    };
-  }
-
   if (searchParams.error === "google-account-conflict") {
     return {
       kind: "error" as const,
-      message: "That Google account is already linked to another XManager user.",
+      message: "That Google account is already linked to another XManager user. Sign out and log in with Google instead.",
     };
   }
 

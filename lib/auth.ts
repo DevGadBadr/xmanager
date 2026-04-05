@@ -146,10 +146,6 @@ export function createAuthOptions(input: {
           : null;
 
         if (account.provider === "google" && currentUser) {
-          if (email !== normalizeEmail(currentUser.email)) {
-            return ensureAppPath("/profile?error=google-email-mismatch");
-          }
-
           if (account.providerAccountId) {
             const existingGoogleAccount = await db.account.findUnique({
               where: {

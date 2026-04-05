@@ -1,4 +1,5 @@
 import { InviteUserDialog } from "@/components/forms/invite-user-dialog";
+import { DeleteUserButton } from "@/components/forms/delete-user-button";
 import { RevokeInviteButton } from "@/components/forms/revoke-invite-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ export default async function UsersPage() {
     listWorkspaceInvitations(membership.workspaceId),
     listTeams(membership.workspaceId),
   ]);
+  const canDeleteUsers = membership.role === "OWNER";
 
   return (
     <div className="space-y-6">
@@ -55,6 +57,14 @@ export default async function UsersPage() {
                       {link.team.name}
                     </Badge>
                   ))}
+                  {canDeleteUsers &&
+                  member.userId !== membership.userId &&
+                  member.userId !== membership.workspace.ownerUserId ? (
+                    <DeleteUserButton
+                      membershipId={member.id}
+                      userLabel={member.user.fullName ?? member.user.email}
+                    />
+                  ) : null}
                 </div>
               </CardContent>
             </Card>

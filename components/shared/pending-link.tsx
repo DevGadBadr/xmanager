@@ -14,6 +14,7 @@ export function PendingLink({
   busyMessage,
   href,
   onClick,
+  onNavigate,
   target,
   ...props
 }: PendingLinkProps) {
@@ -40,6 +41,13 @@ export function PendingLink({
           target === "_blank" ||
           href === currentHref
         ) {
+          return;
+        }
+      }}
+      onNavigate={(event) => {
+        onNavigate?.(event);
+
+        if (event.defaultPrevented || href === currentHref) {
           return;
         }
 

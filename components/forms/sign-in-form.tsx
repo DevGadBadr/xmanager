@@ -107,7 +107,7 @@ export function SignInForm({
       </Button>
       <div className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Google is optional and only works when it uses the same invited email.
+          Google is optional. Use the Google account you already linked from your profile.
         </p>
         {pendingMethod === "google" ? (
           <p className="text-sm text-sky-600 dark:text-sky-300">

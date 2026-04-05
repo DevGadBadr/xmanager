@@ -34,7 +34,7 @@ export async function createNotification(input: CreateNotificationInput) {
   });
 }
 
-export async function listNotifications(userId: string, workspaceId: string) {
+export async function listNotifications(userId: string, workspaceId: string, take = 50) {
   return db.notification.findMany({
     where: {
       userId,
@@ -43,7 +43,7 @@ export async function listNotifications(userId: string, workspaceId: string) {
     orderBy: {
       createdAt: "desc",
     },
-    take: 50,
+    take,
   });
 }
 
@@ -54,6 +54,21 @@ export async function getUnreadNotificationCount(userId: string) {
       readAt: null,
     },
   });
+}
+
+export async function markNotificationRead(notificationId: string, userId: string) {
+  const result = await db.notification.updateMany({
+    where: {
+      id: notificationId,
+      userId,
+      readAt: null,
+    },
+    data: {
+      readAt: new Date(),
+    },
+  });
+
+  return result.count > 0;
 }
 
 export async function markNotificationsRead(userId: string) {

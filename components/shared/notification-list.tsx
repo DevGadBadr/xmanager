@@ -1,8 +1,14 @@
+"use client";
+
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
+import { useSyncAppBusyState } from "@/components/providers/app-navigation-provider";
 import { PendingLink } from "@/components/shared/pending-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ensureAppPath } from "@/lib/auth-path";
 
 type NotificationItem = {
   id: string;
@@ -15,18 +21,58 @@ type NotificationItem = {
 };
 
 export function NotificationList({ items }: { items: NotificationItem[] }) {
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  useSyncAppBusyState("open-notification", pending, "Opening notification...");
+
+  const markReadAndNavigate = (notificationId: string, href: string | null) => {
+    startTransition(async () => {
+      try {
+        await fetch(ensureAppPath(`/api/notifications/read/${notificationId}`), {
+          method: "POST",
+        });
+      } finally {
+        if (href) {
+          router.push(href);
+        }
+
+        router.refresh();
+      }
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Notification feed</CardTitle>
       </CardHeader>
-        <CardContent className="space-y-3">
-          {items.map((item) => (
+      <CardContent className="space-y-3">
+        {items.map((item) => {
+          const href = item.link;
+
+          return (
             <PendingLink
               busyMessage="Opening notification..."
-              className="block rounded-xl border border-zinc-200 p-4 transition hover:border-indigo-300 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-indigo-500/40 dark:hover:bg-zinc-800/60"
-              href={item.link ?? "/notifications"}
+              className="block rounded-xl border border-zinc-200 p-4 text-left transition hover:border-indigo-300 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-indigo-500/40 dark:hover:bg-zinc-800/60"
+              href={href ?? "/notifications"}
               key={item.id}
+              onClick={(event) => {
+                if (href) {
+                  return;
+                }
+
+                event.preventDefault();
+                markReadAndNavigate(item.id, null);
+              }}
+              onNavigate={(event) => {
+                if (!href) {
+                  return;
+                }
+
+                event.preventDefault();
+                markReadAndNavigate(item.id, href);
+              }}
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="font-medium text-zinc-950 dark:text-zinc-50">{item.title}</p>
@@ -37,8 +83,9 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
                 {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })} • {item.type}
               </p>
             </PendingLink>
-          ))}
-        </CardContent>
-      </Card>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

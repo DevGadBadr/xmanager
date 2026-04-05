@@ -57,7 +57,7 @@ export default async function Home() {
               {
                 icon: ShieldCheck,
                 title: "Strict invites",
-                description: "Email-bound acceptance with password setup, mandatory profile completion, and optional same-email Google login.",
+                description: "Email-bound acceptance with password setup, mandatory profile completion, and optional linked Google login.",
               },
               {
                 icon: Users,
@@ -101,7 +101,7 @@ export default async function Home() {
       </section>
 
       <footer className="pb-4 text-center text-xs font-light tracking-wide text-zinc-500 dark:text-zinc-400">
-        Dev Gad Badr | XLABS Technology | Managed by Eng. Ibrahim Mobarak | {currentYear}
+        XLABS Technology | Managed by Eng. Ibrahim Mobarak | Dev Gad Badr | {currentYear}
       </footer>
     </main>
   );
