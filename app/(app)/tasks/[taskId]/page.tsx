@@ -106,7 +106,7 @@ export default async function TaskDetailsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Comments</CardTitle>
+          <CardTitle>Updates</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">

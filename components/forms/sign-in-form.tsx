@@ -27,6 +27,10 @@ function getErrorMessage(error?: string | null) {
     return "This email does not have access yet. Use your invitation email first.";
   }
 
+  if (error === "OAuthAccountNotLinked") {
+    return "Google is not linked for this account yet. Sign in with email first, then link Google from your profile.";
+  }
+
   return "Unable to sign in right now.";
 }
 

@@ -2,8 +2,9 @@ import type { NextRequest } from "next/server";
 import type { AuthAction } from "../../../../node_modules/next-auth/core/types";
 import { AuthHandler } from "../../../../node_modules/next-auth/core/index.js";
 import { getBody, toResponse } from "../../../../node_modules/next-auth/next/utils.js";
+import { getToken } from "next-auth/jwt";
 
-import { authOptions } from "@/lib/auth";
+import { createAuthOptions } from "@/lib/auth";
 import { resolveAuthUrl } from "@/lib/auth-path";
 
 function getCanonicalAuthUrl(request: NextRequest) {
@@ -27,9 +28,13 @@ async function handleAuth(
 ) {
   const nextauth = (await context.params).nextauth;
   const query = Object.fromEntries(request.nextUrl.searchParams);
+  const origin = getCanonicalAuthUrl(request);
   const body = await getBody(request);
+  const token = await getToken({ req: request });
+  const currentUserId =
+    typeof token?.id === "string" ? token.id : typeof token?.sub === "string" ? token.sub : null;
   const internalResponse = await AuthHandler({
-    options: authOptions,
+    options: createAuthOptions({ currentUserId }),
     req: {
       body,
       query,
@@ -39,7 +44,7 @@ async function handleAuth(
       action: nextauth?.[0] as AuthAction,
       providerId: nextauth?.[1],
       error: query.error ?? nextauth?.[1],
-      origin: getCanonicalAuthUrl(request),
+      origin,
     },
   });
   const response = toResponse(internalResponse);

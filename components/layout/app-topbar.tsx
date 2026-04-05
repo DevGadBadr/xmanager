@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, PanelLeftOpen } from "lucide-react";
+import { Bell, PanelLeftOpen, UserRound } from "lucide-react";
 
 import { PendingLink } from "@/components/shared/pending-link";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SignOutButton } from "@/components/shared/sign-out-button";
+import { getInitials, resolveAppAssetUrl } from "@/lib/utils";
 
 export function AppTopbar({
   unreadCount,
@@ -22,6 +23,7 @@ export function AppTopbar({
 }: {
   unreadCount: number;
   user: {
+    fullName?: string | null;
     name?: string | null;
     image?: string | null;
     email?: string | null;
@@ -42,13 +44,9 @@ export function AppTopbar({
     return () => window.clearInterval(interval);
   }, []);
 
-  const initials = (user.name ?? user.email ?? "X")
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const displayName = user.name?.trim() || user.email?.split("@")[0] || "there";
+  const displayName = user.fullName?.trim() || user.name?.trim() || user.email?.split("@")[0] || "there";
+  const initials = getInitials(displayName, "X");
+  const imageSrc = resolveAppAssetUrl(user.image);
   const greetingLead = (() => {
     if (!now) {
       return "Welcome,";
@@ -100,7 +98,7 @@ export function AppTopbar({
           <DropdownMenuTrigger asChild>
             <button className="rounded-full">
               <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                <AvatarImage alt={user.name ?? "User"} src={user.image ?? undefined} />
+                <AvatarImage alt={displayName} src={imageSrc} />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </button>
@@ -108,6 +106,14 @@ export function AppTopbar({
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="pointer-events-none opacity-70">
               {user.email ?? "Signed in"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <PendingLink busyMessage="Opening your profile..." className="flex w-full items-center gap-2" href="/profile">
+                <span className="inline-flex items-center gap-2">
+                  <UserRound className="h-4 w-4" />
+                  Profile
+                </span>
+              </PendingLink>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <div>

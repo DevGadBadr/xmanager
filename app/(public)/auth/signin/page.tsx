@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PasswordResetFlow } from "@/components/forms/password-reset-flow";
 import { SignInForm } from "@/components/forms/sign-in-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,11 @@ export default async function SignInPage({
         </CardHeader>
         <CardContent className="space-y-5">
           <SignInForm callbackUrl={callbackUrl || "/dashboard"} initialError={error} />
+          <PasswordResetFlow
+            dialogTriggerLabel="Forgot password?"
+            description="We’ll send a one-time reset code to the invited email tied to your workspace account."
+            title="Recover your password"
+          />
           <Button asChild className="w-full" variant="ghost">
             <Link href="/">Back to home</Link>
           </Button>

@@ -77,6 +77,7 @@ export async function repairPrimaryOwnerAccountCollision(input: {
         name: profileName ?? existingUser.name,
         fullName: existingUser.fullName ?? profileName,
         image: profileImage ?? existingUser.image,
+        googleImage: profileImage ?? existingUser.googleImage,
         emailVerified: existingUser.emailVerified ?? new Date(),
         lastActiveAt: new Date(),
       },
@@ -267,5 +268,56 @@ export async function bootstrapPrimaryOwner(user: {
         },
       });
     }
+  });
+}
+
+export async function touchUserLastActive(userId: string) {
+  await db.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      lastActiveAt: new Date(),
+    },
+  });
+}
+
+export async function syncGoogleIdentitySnapshot(input: {
+  userId: string;
+  profile?: Profile | null;
+}) {
+  const profileName = getProfileName(input.profile ?? undefined);
+  const profileImage = getProfileImage(input.profile ?? undefined);
+  const existingUser = await db.user.findUnique({
+    where: {
+      id: input.userId,
+    },
+    select: {
+      fullName: true,
+      googleImage: true,
+      image: true,
+      name: true,
+    },
+  });
+
+  if (!existingUser) {
+    return;
+  }
+
+  await db.user.update({
+    where: {
+      id: input.userId,
+    },
+    data: {
+      name: existingUser.name ?? profileName ?? undefined,
+      fullName: existingUser.fullName ?? profileName ?? undefined,
+      googleImage: profileImage ?? existingUser.googleImage ?? undefined,
+      image:
+        profileImage && (!existingUser.image || existingUser.image === existingUser.googleImage)
+          ? profileImage
+          : undefined,
+      emailVerified: new Date(),
+      lastActiveAt: new Date(),
+    },
   });
 }

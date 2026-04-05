@@ -5,9 +5,11 @@ import type React from "react";
 
 import { TeamAssignmentEmail } from "@/emails/team-assignment-email";
 import { TaskAssignmentEmail } from "@/emails/task-assignment-email";
+import { PasswordResetCodeEmail } from "@/emails/password-reset-code-email";
 import { TaskReassignmentEmail } from "@/emails/task-reassignment-email";
 import { WelcomeEmail } from "@/emails/welcome-email";
 import { WorkspaceInviteEmail } from "@/emails/workspace-invite-email";
+import { ensureAppPath } from "@/lib/auth-path";
 import { getEnv } from "@/lib/env";
 import { formatDate } from "@/lib/utils";
 
@@ -165,6 +167,33 @@ export async function sendWelcomeEmail({
         fullName={fullName}
         workspaceName={workspaceName}
         dashboardUrl={dashboardUrl}
+      />
+    ),
+  });
+}
+
+export async function sendPasswordResetCodeEmail({
+  to,
+  fullName,
+  code,
+  expiryMinutes,
+}: {
+  to: string;
+  fullName: string;
+  code: string;
+  expiryMinutes: number;
+}) {
+  const env = getEnv();
+
+  await sendMail({
+    to,
+    subject: "Your XManager password reset code",
+    react: (
+      <PasswordResetCodeEmail
+        code={code}
+        expiryMinutes={expiryMinutes}
+        fullName={fullName}
+        signInUrl={`${env.APP_URL}${ensureAppPath("/auth/signin")}`}
       />
     ),
   });
