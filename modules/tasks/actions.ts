@@ -4,14 +4,28 @@ import { revalidatePath } from "next/cache";
 
 import { initialActionState, type ActionState } from "@/lib/action-state";
 import { getFormValue } from "@/lib/forms";
-import { assertPermission } from "@/lib/rbac";
+import { assertPermission, can } from "@/lib/rbac";
 import { requireCurrentMembership } from "@/modules/auth/server";
 import {
   taskCommentSchema,
+  taskCommentDeleteSchema,
+  taskCommentUpdateSchema,
+  taskContentUpdateSchema,
+  taskDeleteSchema,
   taskSchema,
   taskUpdateSchema,
 } from "@/modules/tasks/schemas";
-import { addTaskComment, createTask, updateTask } from "@/modules/tasks/service";
+import {
+  addTaskComment,
+  deleteTaskComment,
+  createTask,
+  deleteTask,
+  getTaskCommentEditContext,
+  getTaskEditContext,
+  updateTask,
+  updateTaskComment,
+  updateTaskContent,
+} from "@/modules/tasks/service";
 
 export async function createTaskAction(
   prevState: ActionState = initialActionState,
@@ -107,6 +121,51 @@ export async function updateTaskAction(
   }
 }
 
+export async function updateTaskContentAction(
+  prevState: ActionState = initialActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  void prevState;
+
+  try {
+    const membership = await requireCurrentMembership();
+    const values = taskContentUpdateSchema.parse({
+      taskId: getFormValue(formData, "taskId"),
+      title: getFormValue(formData, "title"),
+      description: getFormValue(formData, "description"),
+    });
+
+    const taskContext = await getTaskEditContext(values.taskId, membership.workspaceId);
+    const canEditContent = can(membership.role, "tasks:manage") || taskContext.creatorMembershipId === membership.id;
+
+    if (!canEditContent) {
+      throw new Error("Only the task creator or a manager can update the title and description.");
+    }
+
+    const task = await updateTaskContent({
+      workspaceId: membership.workspaceId,
+      taskId: values.taskId,
+      actorUserId: membership.userId,
+      title: values.title,
+      description: values.description,
+    });
+
+    revalidatePath(`/tasks/${task.id}`);
+    revalidatePath("/projects");
+    revalidatePath(`/projects/${task.projectId}`);
+
+    return {
+      status: "success",
+      message: "Task details updated.",
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to update task details.",
+    };
+  }
+}
+
 export async function addTaskCommentAction(
   prevState: ActionState = initialActionState,
   formData: FormData,
@@ -120,6 +179,9 @@ export async function addTaskCommentAction(
       taskId: getFormValue(formData, "taskId"),
       body: getFormValue(formData, "body"),
     });
+    const attachments = formData
+      .getAll("attachments")
+      .filter((value): value is File => value instanceof File && value.size > 0);
 
     await addTaskComment({
       workspaceId: membership.workspaceId,
@@ -127,6 +189,7 @@ export async function addTaskCommentAction(
       authorMembershipId: membership.id,
       actorUserId: membership.userId,
       body: values.body,
+      attachments,
     });
 
     revalidatePath(`/tasks/${values.taskId}`);
@@ -140,6 +203,123 @@ export async function addTaskCommentAction(
     return {
       status: "error",
       message: error instanceof Error ? error.message : "Unable to add comment.",
+    };
+  }
+}
+
+export async function updateTaskCommentAction(
+  prevState: ActionState = initialActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  void prevState;
+
+  try {
+    const membership = await requireCurrentMembership();
+    const values = taskCommentUpdateSchema.parse({
+      commentId: getFormValue(formData, "commentId"),
+      body: getFormValue(formData, "body"),
+    });
+
+    const commentContext = await getTaskCommentEditContext(values.commentId, membership.workspaceId);
+
+    if (commentContext.authorMembershipId !== membership.id) {
+      throw new Error("Only the commenter can edit this comment.");
+    }
+
+    const comment = await updateTaskComment({
+      workspaceId: membership.workspaceId,
+      commentId: values.commentId,
+      actorUserId: membership.userId,
+      body: values.body,
+    });
+
+    revalidatePath(`/tasks/${comment.taskId}`);
+    revalidatePath("/projects");
+
+    return {
+      status: "success",
+      message: "Comment updated.",
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to update comment.",
+    };
+  }
+}
+
+export async function deleteTaskCommentAction(
+  prevState: ActionState = initialActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  void prevState;
+
+  try {
+    const membership = await requireCurrentMembership();
+    const values = taskCommentDeleteSchema.parse({
+      commentId: getFormValue(formData, "commentId"),
+    });
+
+    const commentContext = await getTaskCommentEditContext(values.commentId, membership.workspaceId);
+
+    if (commentContext.authorMembershipId !== membership.id) {
+      throw new Error("Only the commenter can delete this comment.");
+    }
+
+    const comment = await deleteTaskComment({
+      workspaceId: membership.workspaceId,
+      commentId: values.commentId,
+      actorUserId: membership.userId,
+    });
+
+    revalidatePath(`/tasks/${comment.taskId}`);
+    revalidatePath("/projects");
+
+    return {
+      status: "success",
+      message: "Comment deleted.",
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to delete comment.",
+    };
+  }
+}
+
+export async function deleteTaskAction(
+  prevState: ActionState = initialActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  void prevState;
+
+  try {
+    const membership = await requireCurrentMembership();
+    assertPermission(membership.role, "tasks:manage");
+
+    const values = taskDeleteSchema.parse({
+      taskId: getFormValue(formData, "taskId"),
+    });
+
+    const task = await deleteTask({
+      workspaceId: membership.workspaceId,
+      taskId: values.taskId,
+      actorUserId: membership.userId,
+    });
+
+    revalidatePath("/projects");
+    revalidatePath(`/projects/${task.projectId}`);
+    revalidatePath(`/tasks/${task.id}`);
+
+    return {
+      status: "success",
+      message: "Task deleted.",
+      redirectTo: `/projects/${task.projectId}`,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to delete task.",
     };
   }
 }

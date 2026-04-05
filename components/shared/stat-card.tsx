@@ -22,10 +22,10 @@ export function StatCard({
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div>
           <CardDescription>{title}</CardDescription>
-          <CardTitle className="mt-2 text-3xl">{value}</CardTitle>
+          <CardTitle className="mt-1.5 text-2xl sm:text-3xl">{value}</CardTitle>
         </div>
-        <div className="rounded-full bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
-          <ArrowUpRight className="h-4 w-4" />
+        <div className="rounded-full bg-indigo-100 p-1.5 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+          <ArrowUpRight className="h-3.5 w-3.5" />
         </div>
       </CardHeader>
       <CardContent>

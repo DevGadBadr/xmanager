@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Bell,
   FolderKanban,
@@ -26,6 +27,8 @@ const navigation = [
 export function AppSidebar({
   workspaceName,
   explorer,
+  mode = "desktop",
+  onNavigate,
 }: {
   workspaceName: string;
   explorer: {
@@ -38,54 +41,95 @@ export function AppSidebar({
       openTaskCount?: number;
     }>;
   };
+  mode?: "desktop" | "mobile";
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isProjectsRoute = pathname === "/projects" || pathname.startsWith("/projects/");
-  const selectedProjectId = pathname.startsWith("/projects/") ? pathname.split("/")[2] ?? null : null;
+  const returnTo = searchParams.get("returnTo");
+  const projectIdFromReturnTo = returnTo?.match(/^\/projects\/([^/?#]+)/)?.[1] ?? null;
+  const selectedProjectId = pathname.startsWith("/projects/")
+    ? pathname.split("/")[2] ?? null
+    : projectIdFromReturnTo;
+  const isProjectsContext = isProjectsRoute || Boolean(projectIdFromReturnTo);
+  const isMobile = mode === "mobile";
+  const [projectsExpanded, setProjectsExpanded] = useState(isProjectsContext);
 
   return (
-    <aside className="flex h-screen w-72 flex-col border-r border-zinc-200 bg-[#f7f9fc] px-4 py-5 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
+    <aside
+      className={cn(
+        "flex flex-col text-zinc-900 dark:text-zinc-50",
+        isMobile
+          ? "h-full bg-[#f7f9fc] px-3 py-4 dark:bg-zinc-950"
+          : "hidden h-screen w-64 shrink-0 border-r border-zinc-200 bg-[#f7f9fc] px-3 py-4 dark:border-zinc-800 dark:bg-zinc-950 lg:flex",
+      )}
+    >
       <div
         aria-label={workspaceName}
-        className="mb-6 rounded-2xl border border-zinc-200 bg-white px-4 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        className="mb-5 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
       >
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-semibold tracking-[0.08em] text-zinc-950 dark:text-zinc-50">XManager</h1>
+            <h1 className="text-lg font-semibold tracking-[0.08em] text-zinc-950 dark:text-zinc-50">XManager</h1>
+            {isMobile ? (
+              <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                {workspaceName}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
 
-      <nav className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const isProjectsItem = item.href === "/projects";
+          const active = isProjectsItem
+            ? isProjectsContext
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
-            <div key={item.href} className="space-y-2">
+            <div key={item.href} className={cn("space-y-2", isProjectsItem && projectsExpanded && "space-y-0.5")}>
               <PendingLink
                 busyMessage={`Opening ${item.label.toLowerCase()}...`}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                  "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14.3px] font-medium transition leading-tight",
                   active
                     ? "bg-sky-600 text-white shadow-sm"
                     : "text-zinc-600 hover:bg-white hover:text-zinc-950 hover:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-50",
                 )}
                 href={item.href}
+                onClick={(event) => {
+                  if (!isProjectsItem) {
+                    onNavigate?.();
+                    return;
+                  }
+
+                  if (isProjectsRoute) {
+                    event.preventDefault();
+                    setProjectsExpanded((current) => !current);
+                    onNavigate?.();
+                    return;
+                  }
+
+                  setProjectsExpanded(true);
+                  onNavigate?.();
+                }}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {item.label}
               </PendingLink>
 
-              {isProjectsItem && isProjectsRoute ? (
-                <div className="rounded-2xl border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              {isProjectsItem && projectsExpanded ? (
+                <div className="ml-4 border-l border-zinc-200 pl-2 dark:border-zinc-800">
                   <ExplorerTree
                     assets={explorer.projects}
                     basePath="/projects"
                     selectedAssetId={selectedProjectId}
                     title="Projects"
                     variant="sidebar"
+                    onSelect={onNavigate}
                   />
                 </div>
               ) : null}

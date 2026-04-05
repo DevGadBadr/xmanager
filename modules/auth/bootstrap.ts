@@ -115,7 +115,7 @@ export async function bootstrapPrimaryOwner(user: {
   }
 
   const workspaceSlug = slugify(DEFAULT_WORKSPACE_NAME);
-  const displayName = user.name?.trim() || "Workspace Owner";
+  const displayName = user.name?.trim() || "Gad Badr";
 
   await db.$transaction(async (tx) => {
     const existingUser = await tx.user.findUniqueOrThrow({

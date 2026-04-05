@@ -314,8 +314,22 @@ model TaskComment {
   updatedAt          DateTime   @updatedAt
   task               Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   author             Membership @relation(fields: [authorMembershipId], references: [id], onDelete: Cascade)
+  attachments        TaskCommentAttachment[]
 
   @@index([taskId])
+}
+
+model TaskCommentAttachment {
+  id         String      @id @default(cuid())
+  commentId   String
+  fileName   String
+  filePath   String
+  mimeType   String?
+  size       Int
+  createdAt  DateTime    @default(now())
+  comment    TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
 }
 
 model Notification {

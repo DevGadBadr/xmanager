@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { ThemedToaster } from "@/components/theme/themed-toaster";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import "./globals.css";
-import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "XManager",
@@ -21,7 +21,7 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider>
             {children}
-            <Toaster position="top-right" richColors />
+            <ThemedToaster />
           </ThemeProvider>
         </AuthProvider>
       </body>

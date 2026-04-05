@@ -33,7 +33,9 @@ export async function listProjectExplorer(workspaceId: string) {
       id: true,
       name: true,
       key: true,
+      description: true,
       status: true,
+      ownerMembershipId: true,
       tasks: {
         where: {
           isArchived: false,
@@ -56,7 +58,9 @@ export async function listProjectExplorer(workspaceId: string) {
       id: project.id,
       name: project.name,
       key: project.key,
+      description: project.description,
       status: project.status,
+      ownerMembershipId: project.ownerMembershipId,
       taskCount: project.tasks.length,
       openTaskCount: project.tasks.filter((task) => task.status !== "DONE" && task.status !== "CANCELLED").length,
     })),
@@ -66,14 +70,8 @@ export async function listProjectExplorer(workspaceId: string) {
 export async function getProjectWorkspace(
   projectId: string,
   workspaceId: string,
-  filters?: {
-    assigneeMembershipId?: string;
-    search?: string;
-  },
 ) {
-  const search = filters?.search?.trim();
-
-  return db.project.findFirstOrThrow({
+  return db.project.findFirst({
     where: {
       id: projectId,
       workspaceId,
@@ -98,29 +96,6 @@ export async function getProjectWorkspace(
       tasks: {
         where: {
           isArchived: false,
-          ...(filters?.assigneeMembershipId
-            ? {
-                assigneeMembershipId: filters.assigneeMembershipId,
-              }
-            : {}),
-          ...(search
-            ? {
-                OR: [
-                  {
-                    title: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    description: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
-              }
-            : {}),
         },
         include: {
           assignee: {
@@ -232,6 +207,113 @@ export async function createProject(input: {
       metadata: {
         key: project.key,
       },
+    },
+  });
+
+  return project;
+}
+
+export async function getProjectEditContext(projectId: string, workspaceId: string) {
+  return db.project.findFirstOrThrow({
+    where: {
+      id: projectId,
+      workspaceId,
+      isArchived: false,
+    },
+    select: {
+      id: true,
+      ownerMembershipId: true,
+      name: true,
+    },
+  });
+}
+
+export async function updateProjectContent(input: {
+  workspaceId: string;
+  projectId: string;
+  actorUserId: string;
+  name: string;
+  description?: string;
+}) {
+  const existing = await getProjectEditContext(input.projectId, input.workspaceId);
+
+  const project = await db.project.update({
+    where: {
+      id: input.projectId,
+    },
+    data: {
+      name: input.name,
+      description: input.description || null,
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
+  await db.activityLog.create({
+    data: {
+      workspaceId: input.workspaceId,
+      actorUserId: input.actorUserId,
+      entityType: "PROJECT",
+      entityId: project.id,
+      action: "UPDATED",
+      message:
+        existing.name !== project.name ? `Renamed project ${project.name}` : `Updated project details for ${project.name}`,
+    },
+  });
+
+  return project;
+}
+
+export async function deleteProject(input: {
+  workspaceId: string;
+  projectId: string;
+  actorUserId: string;
+}) {
+  const existing = await db.project.findFirstOrThrow({
+    where: {
+      id: input.projectId,
+      workspaceId: input.workspaceId,
+      isArchived: false,
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
+  const project = await db.project.update({
+    where: {
+      id: existing.id,
+    },
+    data: {
+      isArchived: true,
+      tasks: {
+        updateMany: {
+          where: {
+            isArchived: false,
+          },
+          data: {
+            isArchived: true,
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
+  await db.activityLog.create({
+    data: {
+      workspaceId: input.workspaceId,
+      actorUserId: input.actorUserId,
+      entityType: "PROJECT",
+      entityId: project.id,
+      action: "ARCHIVED",
+      message: `Archived project ${project.name}`,
     },
   });
 

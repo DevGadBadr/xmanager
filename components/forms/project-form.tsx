@@ -21,9 +21,11 @@ type ProjectValues = z.infer<typeof projectSchema>;
 export function ProjectForm({
   className,
   title = "Create project",
+  onSuccess,
 }: {
   className?: string;
   title?: string;
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createProjectAction, initialActionState);
   const form = useForm<ProjectValues>({
@@ -47,12 +49,13 @@ export function ProjectForm({
         status: "PLANNING",
         dueDate: "",
       });
+      onSuccess?.();
     }
 
     if (state.status === "error" && state.message) {
       toast.error(state.message);
     }
-  }, [form, state]);
+  }, [form, onSuccess, state]);
 
   return (
     <Card className={className}>

@@ -1,4 +1,5 @@
 import { InviteUserDialog } from "@/components/forms/invite-user-dialog";
+import { RevokeInviteButton } from "@/components/forms/revoke-invite-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +42,9 @@ export default async function UsersPage() {
                     {member.user.fullName ?? member.user.email}
                   </p>
                   <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    {member.user.email}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                     {member.user.title || "No title"} • {member.user.department || "No department"}
                   </p>
                 </div>
@@ -70,6 +74,7 @@ export default async function UsersPage() {
                   <Badge variant="default">{invite.role}</Badge>
                   {invite.team ? <Badge variant="neutral">{invite.team.name}</Badge> : null}
                   <Badge variant={invite.status === "PENDING" ? "warning" : "neutral"}>{invite.status}</Badge>
+                  <RevokeInviteButton invitationId={invite.id} />
                 </div>
               </CardContent>
             </Card>

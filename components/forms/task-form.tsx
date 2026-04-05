@@ -24,11 +24,13 @@ export function TaskForm({
   memberships,
   className,
   title = "Create task",
+  onSuccess,
 }: {
   projectId: string;
   memberships: Array<{ id: string; user: { fullName: string | null; email: string } }>;
   className?: string;
   title?: string;
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createTaskAction, initialActionState);
   const form = useForm<TaskValues>({
@@ -56,12 +58,13 @@ export function TaskForm({
         startDate: "",
         dueDate: "",
       });
+      onSuccess?.();
     }
 
     if (state.status === "error" && state.message) {
       toast.error(state.message);
     }
-  }, [form, projectId, state]);
+  }, [form, onSuccess, projectId, state]);
 
   return (
     <Card className={className}>
@@ -70,7 +73,7 @@ export function TaskForm({
       </CardHeader>
       <CardContent>
         <form
-          className={cn("space-y-4")}
+          className={cn("space-y-3.5")}
           onSubmit={form.handleSubmit((values) => {
             const payload = new FormData();
             payload.set("projectId", values.projectId);
@@ -92,7 +95,7 @@ export function TaskForm({
             <Label htmlFor="task-description">Description</Label>
             <Textarea id="task-description" rows={4} {...form.register("description")} />
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3.5 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="task-priority">Priority</Label>
               <Select id="task-priority" {...form.register("priority")}>
@@ -114,7 +117,7 @@ export function TaskForm({
               </Select>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3.5 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="task-start-date">Start date</Label>
               <Input id="task-start-date" type="date" {...form.register("startDate")} />

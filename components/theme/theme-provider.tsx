@@ -9,19 +9,35 @@ import {
   type ReactNode,
 } from "react";
 
-type Theme = "light" | "dark";
-type StoredTheme = Theme | "system";
+import { THEME_STORAGE_KEY, type StoredTheme, type Theme } from "@/lib/theme";
 
 type ThemeContextValue = {
   theme: Theme;
   setTheme: (theme: StoredTheme) => void;
 };
 
-const STORAGE_KEY = "theme";
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function getSystemTheme() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function resolveTheme(storedTheme: string | null) {
+  return storedTheme === "light" || storedTheme === "dark" ? storedTheme : getSystemTheme();
+}
+
+function getAppliedTheme() {
+  const root = document.documentElement;
+
+  if (root.classList.contains("dark")) {
+    return "dark";
+  }
+
+  if (root.classList.contains("light")) {
+    return "light";
+  }
+
+  return resolveTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
 }
 
 function applyTheme(theme: Theme) {
@@ -33,14 +49,19 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") {
+      return "light";
+    }
+
+    return getAppliedTheme();
+  });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
     const syncTheme = () => {
-      const storedTheme = window.localStorage.getItem(STORAGE_KEY) as StoredTheme | null;
-      const nextTheme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : getSystemTheme();
+      const nextTheme = resolveTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
 
       setThemeState(nextTheme);
       applyTheme(nextTheme);
@@ -49,7 +70,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     syncTheme();
 
     const onMediaChange = () => {
-      const storedTheme = window.localStorage.getItem(STORAGE_KEY);
+      const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
 
       if (!storedTheme || storedTheme === "system") {
         syncTheme();
@@ -69,7 +90,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setTheme(nextTheme) {
         const resolvedTheme = nextTheme === "system" ? getSystemTheme() : nextTheme;
 
-        window.localStorage.setItem(STORAGE_KEY, nextTheme);
+        window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
         setThemeState(resolvedTheme);
         applyTheme(resolvedTheme);
       },

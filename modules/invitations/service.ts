@@ -16,6 +16,7 @@ export async function listWorkspaceInvitations(workspaceId: string) {
   return db.invitation.findMany({
     where: {
       workspaceId,
+      status: "PENDING",
     },
     include: {
       team: true,
@@ -63,6 +64,58 @@ export async function getInvitationByToken(token: string) {
   }
 
   return invitation;
+}
+
+export async function revokeInvitation(input: {
+  invitationId: string;
+  workspaceId: string;
+  actorUserId: string;
+}) {
+  const invitation = await db.invitation.findFirst({
+    where: {
+      id: input.invitationId,
+      workspaceId: input.workspaceId,
+    },
+    include: {
+      workspace: true,
+      team: true,
+    },
+  });
+
+  if (!invitation) {
+    throw new Error("Invitation not found.");
+  }
+
+  if (invitation.status !== "PENDING") {
+    throw new Error("Only pending invitations can be removed.");
+  }
+
+  const updatedInvitation = await db.invitation.update({
+    where: {
+      id: invitation.id,
+    },
+    data: {
+      status: "REVOKED",
+    },
+  });
+
+  await db.activityLog.create({
+    data: {
+      workspaceId: invitation.workspaceId,
+      actorUserId: input.actorUserId,
+      entityType: "INVITATION",
+      entityId: invitation.id,
+      action: "UPDATED",
+      message: `Revoked invite for ${invitation.email}`,
+      metadata: {
+        email: invitation.email,
+        role: invitation.role,
+        teamId: invitation.teamId ?? null,
+      },
+    },
+  });
+
+  return updatedInvitation;
 }
 
 export async function createInvitation(input: {

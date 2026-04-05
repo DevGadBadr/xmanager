@@ -1,103 +1,56 @@
 "use client";
 
-import { useDeferredValue, useEffect, useEffectEvent, useState, useTransition } from "react";
 import { Search } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { useSyncAppBusyState } from "@/components/providers/app-navigation-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-
-type AssigneeOption = {
-  id: string;
-  label: string;
-};
 
 export function WorkspaceFilterBar({
-  assignees,
-  initialSearch,
-  initialAssigneeId,
+  search,
+  activeFilterLabel,
+  onSearchChange,
+  onClearFilter,
 }: {
-  assignees: AssigneeOption[];
-  initialSearch?: string;
-  initialAssigneeId?: string;
+  search: string;
+  activeFilterLabel: string | null;
+  onSearchChange: (value: string) => void;
+  onClearFilter: () => void;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [search, setSearch] = useState(initialSearch ?? "");
-  const [assigneeId, setAssigneeId] = useState(initialAssigneeId ?? "");
-  const deferredSearch = useDeferredValue(search);
-  const [isPending, startTransition] = useTransition();
-
-  useSyncAppBusyState("project-filters", isPending, "Refreshing project filters...");
-
-  const syncFilters = useEffectEvent((nextSearch: string, nextAssigneeId: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-
-    if (nextSearch.trim()) {
-      params.set("q", nextSearch.trim());
-    } else {
-      params.delete("q");
-    }
-
-    if (nextAssigneeId) {
-      params.set("assignee", nextAssigneeId);
-    } else {
-      params.delete("assignee");
-    }
-
-    params.delete("task");
-
-    const nextQuery = params.toString();
-    const currentQuery = searchParams.toString();
-
-    if (nextQuery === currentQuery) {
-      return;
-    }
-
-    startTransition(() => {
-      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-        scroll: false,
-      });
-    });
-  });
-
-  useEffect(() => {
-    syncFilters(deferredSearch, assigneeId);
-  }, [assigneeId, deferredSearch]);
-
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <label className="relative block">
-          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="space-y-3 lg:flex lg:items-end lg:justify-between lg:gap-3 lg:space-y-0">
+        <label className="block lg:flex lg:items-center lg:gap-3">
+          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400 lg:mb-0 lg:shrink-0">
             Search tasks
           </span>
-          <Search className="pointer-events-none absolute left-3 top-[calc(50%+10px)] h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <Input
-            className="pl-9"
-            disabled={isPending}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by task name or description"
-            value={search}
-          />
+          <span className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Input
+              className="pl-9 lg:min-w-[24rem] xl:min-w-[30rem]"
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Search by task name or description"
+              value={search}
+            />
+          </span>
         </label>
 
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400" htmlFor="assignee-filter">
-            Assignee
-          </Label>
-          <Select disabled={isPending} id="assignee-filter" onChange={(event) => setAssigneeId(event.target.value)} value={assigneeId}>
-            <option value="">All assignees</option>
-            {assignees.map((assignee) => (
-              <option key={assignee.id} value={assignee.id}>
-                {assignee.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {activeFilterLabel ? (
+          <div className="flex min-h-8 items-center justify-between gap-3 lg:flex-none">
+            <div className="flex min-h-8 items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                Quick filter
+              </span>
+              <Badge className="px-2.5 py-1 text-[10px]" variant="default">
+                {activeFilterLabel}
+              </Badge>
+            </div>
+
+            <Button className="h-8 px-2.5 text-xs" onClick={onClearFilter} type="button" variant="ghost">
+              Clear
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

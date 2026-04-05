@@ -20,8 +20,14 @@ type TeamValues = z.infer<typeof teamSchema>;
 
 export function TeamForm({
   memberships,
+  className,
+  title = "Create team",
+  onSuccess,
 }: {
   memberships: Array<{ id: string; user: { fullName: string | null; email: string } }>;
+  className?: string;
+  title?: string;
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createTeamAction, initialActionState);
   const form = useForm<TeamValues>({
@@ -37,21 +43,22 @@ export function TeamForm({
     if (state.status === "success") {
       toast.success(state.message);
       form.reset();
+      onSuccess?.();
     }
 
     if (state.status === "error" && state.message) {
       toast.error(state.message);
     }
-  }, [form, state]);
+  }, [form, onSuccess, state]);
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
-        <CardTitle>Create team</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
-          className="space-y-4"
+          className="space-y-3.5"
           onSubmit={form.handleSubmit((values) => {
             const payload = new FormData();
             payload.set("name", values.name);

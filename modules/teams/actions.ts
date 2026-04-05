@@ -7,7 +7,7 @@ import { getFormValue } from "@/lib/forms";
 import { assertPermission } from "@/lib/rbac";
 import { requireCurrentMembership } from "@/modules/auth/server";
 import { teamSchema } from "@/modules/teams/schemas";
-import { createTeam } from "@/modules/teams/service";
+import { createTeam, deleteTeam } from "@/modules/teams/service";
 
 export async function createTeamAction(
   prevState: ActionState = initialActionState,
@@ -43,6 +43,37 @@ export async function createTeamAction(
     return {
       status: "error",
       message: error instanceof Error ? error.message : "Unable to create team.",
+    };
+  }
+}
+
+export async function deleteTeamAction(
+  prevState: ActionState = initialActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  void prevState;
+
+  try {
+    const membership = await requireCurrentMembership();
+    assertPermission(membership.role, "teams:manage");
+
+    await deleteTeam({
+      teamId: getFormValue(formData, "teamId"),
+      workspaceId: membership.workspaceId,
+      actorUserId: membership.userId,
+    });
+
+    revalidatePath("/teams");
+    revalidatePath("/users");
+
+    return {
+      status: "success",
+      message: "Team removed.",
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to remove team.",
     };
   }
 }

@@ -15,28 +15,28 @@ export default async function DashboardPage() {
   const dashboard = await getDashboardData(membership.workspaceId, membership.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         description="Overview of active work, team coverage, and recent activity."
         title="Dashboard"
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <StatCard description="Projects currently scoped in the workspace." title="Projects" value={dashboard.projectCount} />
         <StatCard description="Configured delivery teams." title="Teams" value={dashboard.teamCount} />
         <StatCard description="Tasks that still need action." title="Open tasks" value={dashboard.openTaskCount} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+      <div className="grid gap-5 xl:grid-cols-[1fr_0.95fr]">
         <Card>
           <CardHeader>
             <CardTitle>Assigned to you</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5">
             {dashboard.assignedTasks.map((task) => (
               <PendingLink
                 busyMessage="Opening task..."
-                className="block rounded-xl border border-zinc-200 p-4 transition hover:border-indigo-300 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-indigo-500/30 dark:hover:bg-zinc-800/50"
+                className="block rounded-xl border border-zinc-200 p-3.5 transition hover:border-indigo-300 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-indigo-500/30 dark:hover:bg-zinc-800/50"
                 href={`/tasks/${task.id}`}
                 key={task.id}
               >

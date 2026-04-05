@@ -7,7 +7,11 @@ import { getFormValue } from "@/lib/forms";
 import { assertPermission } from "@/lib/rbac";
 import { requireCurrentMembership } from "@/modules/auth/server";
 import { inviteSchema, onboardingSchema } from "@/modules/invitations/schemas";
-import { acceptInvitation, createInvitation } from "@/modules/invitations/service";
+import {
+  acceptInvitation,
+  createInvitation,
+  revokeInvitation,
+} from "@/modules/invitations/service";
 
 export async function inviteUserAction(
   prevState: ActionState = initialActionState,
@@ -79,6 +83,36 @@ export async function completeOnboardingAction(
     return {
       status: "error",
       message: error instanceof Error ? error.message : "Unable to complete onboarding.",
+    };
+  }
+}
+
+export async function revokeInvitationAction(
+  prevState: ActionState = initialActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  void prevState;
+
+  try {
+    const membership = await requireCurrentMembership();
+    assertPermission(membership.role, "invites:create");
+
+    await revokeInvitation({
+      invitationId: getFormValue(formData, "invitationId"),
+      workspaceId: membership.workspaceId,
+      actorUserId: membership.userId,
+    });
+
+    revalidatePath("/users");
+
+    return {
+      status: "success",
+      message: "Invitation removed.",
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Failed to remove invitation.",
     };
   }
 }
