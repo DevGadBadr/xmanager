@@ -114,7 +114,7 @@ export function TaskInlineEditor({
     }
 
     const updatePosition = () => {
-      setPosition(getFloatingPosition(anchorElement.getBoundingClientRect(), activeEditor));
+      setPosition(getFloatingPosition(anchorElement, activeEditor));
     };
 
     const handlePointerDown = (event: MouseEvent) => {
@@ -182,7 +182,7 @@ export function TaskInlineEditor({
       setDraftAssigneeIds(task.assignees.map((assignee) => assignee.membershipId));
     }
 
-    const nextPosition = getFloatingPosition(target.getBoundingClientRect(), editor);
+    const nextPosition = getFloatingPosition(target, editor);
 
     if (activeEditor === editor && anchorElement === target) {
       closeEditor();
@@ -618,19 +618,63 @@ function formatLabel(value: string) {
     .join(" ");
 }
 
-function getFloatingPosition(rect: DOMRect, editor: Exclude<ActiveEditor, null>): FloatingPosition {
+function getFloatingPosition(target: HTMLElement, editor: Exclude<ActiveEditor, null>): FloatingPosition {
   const estimatedHeight = editor === "assignee" ? 320 : editor === "startDate" || editor === "dueDate" ? 180 : 240;
-  const width = editor === "assignee" ? 320 : Math.max(220, Math.round(rect.width));
+  const rect = target.getBoundingClientRect();
+  const bounds = getFloatingViewportBounds(target);
   const gutter = 16;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const left = Math.min(Math.max(gutter, rect.left), viewportWidth - width - gutter);
-  const fitsBelow = rect.bottom + 8 + estimatedHeight <= viewportHeight - gutter;
-  const top = fitsBelow ? rect.bottom + 8 : Math.max(gutter, rect.top - estimatedHeight - 8);
+  const maxWidth = Math.max(220, Math.floor(bounds.right - bounds.left - gutter * 2));
+  const preferredWidth = editor === "assignee" ? 320 : Math.max(220, Math.round(rect.width));
+  const width = Math.min(preferredWidth, maxWidth);
+  const left = Math.min(Math.max(bounds.left + gutter, rect.left), bounds.right - width - gutter);
+  const fitsBelow = rect.bottom + 8 + estimatedHeight <= bounds.bottom - gutter;
+  const top = fitsBelow ? rect.bottom + 8 : Math.max(bounds.top + gutter, rect.top - estimatedHeight - 8);
 
   return {
     left,
     top,
     width,
   };
+}
+
+function getFloatingViewportBounds(target: HTMLElement) {
+  const scrollContainer = getNearestScrollContainer(target);
+
+  if (!scrollContainer) {
+    return {
+      top: 0,
+      left: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+    };
+  }
+
+  const rect = scrollContainer.getBoundingClientRect();
+
+  return {
+    top: rect.top,
+    left: rect.left,
+    right: rect.right,
+    bottom: rect.bottom,
+  };
+}
+
+function getNearestScrollContainer(element: HTMLElement) {
+  let current: HTMLElement | null = element.parentElement;
+
+  while (current) {
+    const styles = window.getComputedStyle(current);
+    const overflowY = styles.overflowY;
+    const overflowX = styles.overflowX;
+    const scrollableY = /(auto|scroll|overlay)/.test(overflowY) && current.scrollHeight > current.clientHeight;
+    const scrollableX = /(auto|scroll|overlay)/.test(overflowX) && current.scrollWidth > current.clientWidth;
+
+    if (scrollableY || scrollableX) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
 }

@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import Image from "next/image";
 
 import { CommentForm } from "@/components/forms/comment-form";
 import { DeleteTaskButton } from "@/components/forms/delete-task-button";
@@ -7,12 +8,14 @@ import { PendingLink } from "@/components/shared/pending-link";
 import { TaskCommentActionsMenu } from "@/components/tasks/task-comment-actions-menu";
 import { TaskContentEditor } from "@/components/tasks/task-content-editor";
 import { TaskInlineEditor } from "@/components/tasks/task-inline-editor";
+import { TaskUpdateBody } from "@/components/tasks/task-update-body";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ensureAppPath } from "@/lib/auth-path";
 import { can } from "@/lib/rbac";
+import { resolveAppAssetUrl } from "@/lib/utils";
 import { requireCurrentMembership } from "@/modules/auth/server";
 import { listWorkspaceMembershipOptions } from "@/modules/memberships/service";
 import { getTaskDetails } from "@/modules/tasks/service";
@@ -119,19 +122,50 @@ export default async function TaskDetailsPage({
           <div className="space-y-3">
             {task.comments.length > 0 ? (
               task.comments.map((comment) => (
-                <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800" key={comment.id}>
+                <div className="rounded-2xl border border-zinc-200 bg-white/90 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40" key={comment.id}>
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                      {comment.author.user.fullName ?? comment.author.user.email}
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                        {comment.author.user.fullName ?? comment.author.user.email}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {formatTaskUpdateTimestamp(comment.createdAt, comment.updatedAt)}
+                      </p>
+                    </div>
                     {comment.authorMembershipId === membership.id ? (
                       <TaskCommentActionsMenu commentBody={comment.body} commentId={comment.id} />
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">{comment.body}</p>
-                  {comment.attachments.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {comment.attachments.map((attachment) => (
+                  <TaskUpdateBody body={comment.body} className="mt-3" />
+                  {comment.attachments.some((attachment) => isImageAttachment(attachment)) ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {comment.attachments.filter(isImageAttachment).map((attachment) => (
+                        <a
+                          className="group overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 transition hover:border-sky-200 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-sky-500/30"
+                          href={ensureAppPath(attachment.filePath)}
+                          key={attachment.id}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <Image
+                            alt={attachment.fileName}
+                            className="h-52 w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                            height={720}
+                            loading="lazy"
+                            src={resolveAppAssetUrl(attachment.filePath) ?? ensureAppPath(attachment.filePath)}
+                            unoptimized
+                            width={1200}
+                          />
+                          <div className="border-t border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-300">
+                            {attachment.fileName}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                  {comment.attachments.some((attachment) => !isImageAttachment(attachment)) ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {comment.attachments.filter((attachment) => !isImageAttachment(attachment)).map((attachment) => (
                         <a
                           className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-sky-200 hover:text-sky-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-sky-500/30 dark:hover:text-sky-300"
                           href={ensureAppPath(attachment.filePath)}
@@ -147,14 +181,16 @@ export default async function TaskDetailsPage({
                 </div>
               ))
             ) : (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">No comments yet.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">No updates yet.</p>
             )}
           </div>
           <Separator />
           <div className="space-y-3">
             <div className="space-y-1">
-              <h3 className="text-sm font-medium text-zinc-950 dark:text-zinc-50">Add comment</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Add your note below the existing thread.</p>
+              <h3 className="text-sm font-medium text-zinc-950 dark:text-zinc-50">Post update</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Preserve spacing, paste URLs for clickable links, and upload images to show them inline in the update card.
+              </p>
             </div>
             <CommentForm taskId={task.id} />
           </div>
@@ -162,6 +198,31 @@ export default async function TaskDetailsPage({
       </Card>
     </div>
   );
+}
+
+function isImageAttachment(attachment: { fileName: string; mimeType: string | null }) {
+  if (attachment.mimeType?.startsWith("image/")) {
+    return true;
+  }
+
+  return /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(attachment.fileName);
+}
+
+function formatTaskUpdateTimestamp(createdAt: Date, updatedAt: Date) {
+  const formatter = new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const createdLabel = formatter.format(createdAt);
+
+  if (createdAt.getTime() === updatedAt.getTime()) {
+    return createdLabel;
+  }
+
+  return `${createdLabel} · edited`;
 }
 
 function TaskBackLink({

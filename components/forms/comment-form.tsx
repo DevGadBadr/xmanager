@@ -48,7 +48,12 @@ export function CommentForm({ taskId }: { taskId: string }) {
       }}
     >
       <input name="taskId" type="hidden" value={taskId} />
-      <Textarea name="body" placeholder="Add context, a status update, or a blocker." rows={4} />
+      <Textarea
+        className="min-h-[7.5rem]"
+        name="body"
+        placeholder={"Share progress, blockers, or context.\n\nSupports links, lists, quotes, `code`, and preserved spacing."}
+        rows={6}
+      />
       <input
         className="hidden"
         multiple
@@ -110,7 +115,7 @@ export function CommentForm({ taskId }: { taskId: string }) {
           <Paperclip className="h-4 w-4" />
         </Button>
         <Button disabled={pending} type="submit">
-          {pending ? "Posting..." : "Add comment"}
+          {pending ? "Posting..." : "Post update"}
         </Button>
       </div>
     </form>

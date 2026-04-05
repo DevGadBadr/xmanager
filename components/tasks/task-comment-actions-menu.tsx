@@ -65,7 +65,7 @@ export function TaskCommentActionsMenu({
     <>
       <DropdownMenu onOpenChange={setMenuOpen} open={menuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button aria-label="Comment actions" className="h-7 w-7" size="icon" type="button" variant="ghost">
+          <Button aria-label="Update actions" className="h-7 w-7" size="icon" type="button" variant="ghost">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -98,8 +98,8 @@ export function TaskCommentActionsMenu({
       <Dialog onOpenChange={setEditOpen} open={editOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit comment</DialogTitle>
-            <DialogDescription>Update your comment on this task.</DialogDescription>
+            <DialogTitle>Edit update</DialogTitle>
+            <DialogDescription>Revise the content of this task update.</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
@@ -111,7 +111,13 @@ export function TaskCommentActionsMenu({
               startTransition(() => editFormAction(payload));
             }}
           >
-            <Textarea onChange={(event) => setBody(event.target.value)} rows={6} value={body} />
+            <Textarea
+              className="min-h-[7.5rem]"
+              onChange={(event) => setBody(event.target.value)}
+              placeholder={"Update the text while keeping formatting, spacing, links, and markdown-lite content."}
+              rows={6}
+              value={body}
+            />
             <div className="flex justify-end gap-2">
               <Button disabled={editPending} onClick={() => setEditOpen(false)} type="button" variant="outline">
                 Cancel
@@ -125,8 +131,8 @@ export function TaskCommentActionsMenu({
       </Dialog>
 
       <ConfirmationDialog
-        confirmLabel="Delete comment"
-        description="Delete this comment? This cannot be undone."
+        confirmLabel="Delete update"
+        description="Delete this update? This cannot be undone."
         onConfirm={() => {
           const payload = new FormData();
           payload.set("commentId", commentId);
@@ -135,7 +141,7 @@ export function TaskCommentActionsMenu({
         onOpenChange={setDeleteOpen}
         open={deleteOpen}
         pending={deletePending}
-        title="Delete comment"
+        title="Delete update"
       >
         <span className="hidden" />
       </ConfirmationDialog>

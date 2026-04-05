@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ZodError } from "zod";
 
 import { initialActionState, type ActionState } from "@/lib/action-state";
 import { getFormValue } from "@/lib/forms";
@@ -26,6 +27,24 @@ import {
   updateTaskComment,
   updateTaskContent,
 } from "@/modules/tasks/service";
+
+function getTaskActionErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ZodError) {
+    const firstIssue = error.issues[0];
+
+    if (!firstIssue) {
+      return fallback;
+    }
+
+    if (firstIssue.path[0] === "assigneeMembershipIds") {
+      return "One or more selected assignees are invalid. Refresh and try again.";
+    }
+
+    return firstIssue.message || fallback;
+  }
+
+  return error instanceof Error ? error.message : fallback;
+}
 
 export async function createTaskAction(
   prevState: ActionState = initialActionState,
@@ -70,7 +89,7 @@ export async function createTaskAction(
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to create task.",
+      message: getTaskActionErrorMessage(error, "Unable to create task."),
     };
   }
 }
@@ -116,7 +135,7 @@ export async function updateTaskAction(
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to update task.",
+      message: getTaskActionErrorMessage(error, "Unable to update task."),
     };
   }
 }
@@ -203,12 +222,12 @@ export async function addTaskCommentAction(
 
     return {
       status: "success",
-      message: "Comment added.",
+      message: "Update posted.",
     };
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to add comment.",
+      message: error instanceof Error ? error.message : "Unable to post update.",
     };
   }
 }
@@ -229,7 +248,7 @@ export async function updateTaskCommentAction(
     const commentContext = await getTaskCommentEditContext(values.commentId, membership.workspaceId);
 
     if (commentContext.authorMembershipId !== membership.id) {
-      throw new Error("Only the commenter can edit this comment.");
+      throw new Error("Only the author can edit this update.");
     }
 
     const comment = await updateTaskComment({
@@ -244,12 +263,12 @@ export async function updateTaskCommentAction(
 
     return {
       status: "success",
-      message: "Comment updated.",
+      message: "Update saved.",
     };
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to update comment.",
+      message: error instanceof Error ? error.message : "Unable to save update.",
     };
   }
 }
@@ -269,7 +288,7 @@ export async function deleteTaskCommentAction(
     const commentContext = await getTaskCommentEditContext(values.commentId, membership.workspaceId);
 
     if (commentContext.authorMembershipId !== membership.id) {
-      throw new Error("Only the commenter can delete this comment.");
+      throw new Error("Only the author can delete this update.");
     }
 
     const comment = await deleteTaskComment({
@@ -283,12 +302,12 @@ export async function deleteTaskCommentAction(
 
     return {
       status: "success",
-      message: "Comment deleted.",
+      message: "Update deleted.",
     };
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to delete comment.",
+      message: error instanceof Error ? error.message : "Unable to delete update.",
     };
   }
 }

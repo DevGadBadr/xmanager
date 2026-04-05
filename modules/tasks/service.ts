@@ -20,6 +20,31 @@ const taskAssigneeInclude = {
   },
 };
 
+async function validateWorkspaceAssigneeIds(workspaceId: string, assigneeMembershipIds: string[]) {
+  if (assigneeMembershipIds.length === 0) {
+    return [];
+  }
+
+  const matchingMemberships = await db.membership.findMany({
+    where: {
+      workspaceId,
+      id: {
+        in: assigneeMembershipIds,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+  const validMembershipIds = new Set(matchingMemberships.map((membership) => membership.id));
+
+  if (validMembershipIds.size !== assigneeMembershipIds.length) {
+    throw new Error("One or more selected assignees are invalid for this workspace.");
+  }
+
+  return assigneeMembershipIds;
+}
+
 export async function getTaskDetails(taskId: string, workspaceId: string) {
   return db.task.findFirst({
     where: {
@@ -73,7 +98,10 @@ export async function createTask(input: {
   startDate?: string;
   dueDate?: string;
 }) {
-  const assigneeMembershipIds = Array.from(new Set(input.assigneeMembershipIds ?? []));
+  const assigneeMembershipIds = await validateWorkspaceAssigneeIds(
+    input.workspaceId,
+    Array.from(new Set((input.assigneeMembershipIds ?? []).map((membershipId) => membershipId.trim()).filter(Boolean))),
+  );
   const task = await db.task.create({
     data: {
       workspaceId: input.workspaceId,
@@ -184,7 +212,10 @@ export async function updateTask(input: {
     },
   });
 
-  const assigneeMembershipIds = Array.from(new Set(input.assigneeMembershipIds ?? []));
+  const assigneeMembershipIds = await validateWorkspaceAssigneeIds(
+    input.workspaceId,
+    Array.from(new Set((input.assigneeMembershipIds ?? []).map((membershipId) => membershipId.trim()).filter(Boolean))),
+  );
   const existingAssigneeIds = existing.assignees.map((assignment) => assignment.membershipId);
   const hasAssignmentChanges =
     assigneeMembershipIds.length !== existingAssigneeIds.length ||
