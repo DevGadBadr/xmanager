@@ -94,12 +94,9 @@ export async function removeWorkspaceMember(input: {
       },
     });
 
-    await tx.task.updateMany({
+    await tx.taskAssignment.deleteMany({
       where: {
-        assigneeMembershipId: membership.id,
-      },
-      data: {
-        assigneeMembershipId: null,
+        membershipId: membership.id,
       },
     });
 

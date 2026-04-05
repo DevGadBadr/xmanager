@@ -11,7 +11,7 @@ import { ProjectContentEditor } from "@/components/projects/project-content-edit
 import { ProjectTaskTable } from "@/components/projects/task-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PendingLink } from "@/components/shared/pending-link";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TaskAssigneeGroup, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,13 +32,7 @@ type TaskRow = {
   priority: string;
   startDate: Date | string | null;
   dueDate: Date | string | null;
-  assigneeMembershipId: string | null;
-  assignee?: {
-    user: {
-      fullName: string | null;
-      email: string;
-    };
-  } | null;
+  assignees: TaskAssigneeView[];
 };
 
 type StoredProjectFilters = {
@@ -175,7 +169,10 @@ export function ProjectWorkspaceView({
     const normalizedSearch = deferredSearch.trim().toLocaleLowerCase();
 
     return tasks.filter((task) => {
-      if (activeQuickFilter?.type === "assignee" && task.assigneeMembershipId !== activeQuickFilter.value) {
+      if (
+        activeQuickFilter?.type === "assignee" &&
+        !task.assignees.some((assignee) => assignee.membershipId === activeQuickFilter.value)
+      ) {
         return false;
       }
 
@@ -653,41 +650,18 @@ function ProjectTaskBoard({
                   ) : null}
 
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <button
-                      aria-pressed={activeQuickFilter?.type === "assignee" && activeQuickFilter.value === task.assigneeMembershipId}
-                      className={cn(
-                        "appearance-none border-0 flex items-center gap-2 rounded-full px-1.5 py-1 text-left transition hover:bg-zinc-100 dark:hover:bg-zinc-800/80",
-                        activeQuickFilter?.type === "assignee" &&
-                          activeQuickFilter.value === task.assigneeMembershipId &&
-                          "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-                        !task.assigneeMembershipId && "cursor-default hover:bg-transparent dark:hover:bg-transparent",
-                      )}
-                      disabled={!task.assigneeMembershipId}
-                      onClick={(event) => {
-                        event.stopPropagation();
-
-                        if (!task.assigneeMembershipId) {
-                          return;
-                        }
-
-                        onAssigneeClick(task.assigneeMembershipId);
-                      }}
-                      type="button"
-                    >
-                      <Avatar className="h-7 w-7">
-                        <AvatarFallback>{getInitials(task.assignee?.user.fullName ?? task.assignee?.user.email)}</AvatarFallback>
-                      </Avatar>
-                      <span
-                        className={cn(
-                          "max-w-[10rem] truncate text-xs",
-                          activeQuickFilter?.type === "assignee" && activeQuickFilter.value === task.assigneeMembershipId
-                            ? "text-current"
-                            : "text-zinc-600 dark:text-zinc-300",
+                    <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                      <TaskAssigneeGroup
+                        activeMembershipId={activeQuickFilter?.type === "assignee" ? activeQuickFilter.value : null}
+                        assignees={task.assignees}
+                        onAssigneeClick={onAssigneeClick}
+                        triggerClassName={cn(
+                          activeQuickFilter?.type === "assignee" &&
+                            task.assignees.some((assignee) => assignee.membershipId === activeQuickFilter.value) &&
+                            "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
                         )}
-                      >
-                        {task.assignee?.user.fullName ?? task.assignee?.user.email ?? "Unassigned"}
-                      </span>
-                    </button>
+                      />
+                    </div>
 
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">{formatDate(task.dueDate)}</span>
                   </div>
@@ -703,19 +677,6 @@ function ProjectTaskBoard({
       ))}
     </div>
   );
-}
-
-function getInitials(value?: string | null) {
-  if (!value) {
-    return "NA";
-  }
-
-  return value
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function MetricChip({

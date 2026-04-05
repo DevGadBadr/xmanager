@@ -260,7 +260,11 @@ export async function bootstrapPrimaryOwner(user: {
           projectId: project.id,
           creatorMembershipId: membership.id,
           reporterMembershipId: membership.id,
-          assigneeMembershipId: membership.id,
+          assignees: {
+            create: {
+              membershipId: membership.id,
+            },
+          },
           title: DEFAULT_TASK_TITLE,
           description: "Verify seeded owner access, invitation creation, and dashboard rendering.",
           priority: "HIGH",

@@ -2,12 +2,13 @@
 
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, ChevronDown, CirclePlus, UserPlus } from "lucide-react";
+import { Calendar, Check, ChevronDown, CirclePlus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { initialActionState } from "@/lib/action-state";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { updateTaskAction } from "@/modules/tasks/actions";
+import { TaskAssigneeSummary, getTaskAssigneeInitials, getTaskAssigneeLabel, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,7 @@ type EditableTask = {
   id: string;
   status: string;
   priority: string;
-  assigneeMembershipId: string | null;
-  assignee?: {
-    user: {
-      fullName: string | null;
-      email: string;
-    };
-  } | null;
+  assignees: TaskAssigneeView[];
   startDate?: Date | string | null;
   dueDate?: Date | string | null;
 };
@@ -42,6 +37,14 @@ type FloatingPosition = {
   left: number;
   top: number;
   width: number;
+};
+
+type TaskUpdateOverrides = {
+  assigneeMembershipIds?: string[];
+  dueDate?: string;
+  priority?: string;
+  startDate?: string;
+  status?: string;
 };
 
 const STATUS_OPTIONS = [
@@ -76,10 +79,17 @@ export function TaskInlineEditor({
   const [position, setPosition] = useState<FloatingPosition | null>(null);
   const [draftStartDate, setDraftStartDate] = useState(formatDateInput(task.startDate));
   const [draftDueDate, setDraftDueDate] = useState(formatDateInput(task.dueDate));
+  const [draftAssigneeIds, setDraftAssigneeIds] = useState<string[]>(task.assignees.map((assignee) => assignee.membershipId));
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const currentAssignee = useMemo(
-    () => memberships.find((membership) => membership.id === task.assigneeMembershipId) ?? null,
-    [memberships, task.assigneeMembershipId],
+  const selectedAssignees = useMemo(
+    () =>
+      memberships
+        .filter((membership) => task.assignees.some((assignee) => assignee.membershipId === membership.id))
+        .map((membership) => ({
+          membershipId: membership.id,
+          user: membership.user,
+        })),
+    [memberships, task.assignees],
   );
 
   const closeEditor = () => {
@@ -140,23 +150,21 @@ export function TaskInlineEditor({
     };
   }, [activeEditor, anchorElement]);
 
-  const submitUpdate = (
-    overrides: Partial<Record<"assigneeMembershipId" | "dueDate" | "priority" | "startDate" | "status", string>>,
-  ) => {
+  const submitUpdate = (overrides: TaskUpdateOverrides) => {
     const payload = new FormData();
     payload.set("taskId", task.id);
     payload.set("status", overrides.status ?? task.status);
     payload.set("priority", overrides.priority ?? task.priority);
-    payload.set("assigneeMembershipId", overrides.assigneeMembershipId ?? task.assigneeMembershipId ?? "");
+    for (const membershipId of overrides.assigneeMembershipIds ?? task.assignees.map((assignee) => assignee.membershipId)) {
+      payload.append("assigneeMembershipIds", membershipId);
+    }
     payload.set("startDate", overrides.startDate ?? formatDateInput(task.startDate));
     payload.set("dueDate", overrides.dueDate ?? formatDateInput(task.dueDate));
 
     startTransition(() => formAction(payload));
   };
 
-  const submitAndClose = (
-    overrides: Partial<Record<"assigneeMembershipId" | "dueDate" | "priority" | "startDate" | "status", string>>,
-  ) => {
+  const submitAndClose = (overrides: TaskUpdateOverrides) => {
     closeEditor();
     submitUpdate(overrides);
   };
@@ -168,6 +176,10 @@ export function TaskInlineEditor({
 
     if (editor === "dueDate") {
       setDraftDueDate(formatDateInput(task.dueDate));
+    }
+
+    if (editor === "assignee") {
+      setDraftAssigneeIds(task.assignees.map((assignee) => assignee.membershipId));
     }
 
     const nextPosition = getFloatingPosition(target.getBoundingClientRect(), editor);
@@ -257,7 +269,7 @@ export function TaskInlineEditor({
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{projectName}</p>
         </TaskMetaItem>
 
-        <TaskMetaItem label="Assignee">
+        <TaskMetaItem label="Assignees">
           <div className="flex flex-wrap items-center gap-2">
             {canManageTasks ? (
               <>
@@ -265,15 +277,8 @@ export function TaskInlineEditor({
                   onClick={(event) => openEditor("assignee", event.currentTarget)}
                   open={activeEditor === "assignee"}
                 >
-                  {currentAssignee ? (
-                    <>
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback>
-                          {getInitials(currentAssignee.user.fullName ?? currentAssignee.user.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{currentAssignee.user.fullName ?? currentAssignee.user.email}</span>
-                    </>
+                  {selectedAssignees.length > 0 ? (
+                    <TaskAssigneeSummary assignees={selectedAssignees} />
                   ) : (
                     <>
                       <UserPlus className="h-3.5 w-3.5 text-zinc-400" />
@@ -291,14 +296,9 @@ export function TaskInlineEditor({
                   <CirclePlus className="h-4 w-4" />
                 </Button>
               </>
-            ) : currentAssignee ? (
+            ) : selectedAssignees.length > 0 ? (
               <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-900">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback>{getInitials(currentAssignee.user.fullName ?? currentAssignee.user.email)}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {currentAssignee.user.fullName ?? currentAssignee.user.email}
-                </span>
+                <TaskAssigneeSummary assignees={selectedAssignees} />
               </div>
             ) : (
               <span className="text-sm text-zinc-500 dark:text-zinc-400">Unassigned</span>
@@ -341,32 +341,68 @@ export function TaskInlineEditor({
         ) : null}
 
         {activeEditor === "assignee" ? (
-          <FloatingOptionList className="max-h-80 overflow-y-auto">
-            <FloatingOptionButton
-              onClick={() => submitAndClose({ assigneeMembershipId: "" })}
-              pending={pending}
-              selected={!task.assigneeMembershipId}
+          <div className="space-y-2 p-1">
+            <button
+              className={cn(
+                "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition hover:bg-zinc-50 dark:hover:bg-zinc-800",
+                draftAssigneeIds.length === 0 && "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
+              )}
+              onClick={() => setDraftAssigneeIds([])}
+              type="button"
             >
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Unassigned</span>
-            </FloatingOptionButton>
-            {memberships.map((membership) => (
-              <FloatingOptionButton
-                key={membership.id}
-                onClick={() => submitAndClose({ assigneeMembershipId: membership.id })}
-                pending={pending}
-                selected={task.assigneeMembershipId === membership.id}
+              <span className="font-medium">Unassigned</span>
+              {draftAssigneeIds.length === 0 ? <Check className="h-4 w-4" /> : null}
+            </button>
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {memberships.map((membership) => {
+                const selected = draftAssigneeIds.includes(membership.id);
+                return (
+                  <button
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-800",
+                      selected && "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
+                    )}
+                    key={membership.id}
+                    onClick={() =>
+                      setDraftAssigneeIds((current) =>
+                        current.includes(membership.id)
+                          ? current.filter((value) => value !== membership.id)
+                          : [...current, membership.id],
+                      )
+                    }
+                    type="button"
+                  >
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback>{getTaskAssigneeInitials(getTaskAssigneeLabel({ membershipId: membership.id, user: membership.user }))}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {membership.user.fullName ?? membership.user.email}
+                    </span>
+                    {selected ? <Check className="h-4 w-4 shrink-0" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-zinc-200 px-2 pt-2 dark:border-zinc-800">
+              <Button
+                onClick={() => {
+                  setDraftAssigneeIds(task.assignees.map((assignee) => assignee.membershipId));
+                  closeEditor();
+                }}
+                type="button"
+                variant="ghost"
               >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback>{getInitials(membership.user.fullName ?? membership.user.email)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {membership.user.fullName ?? membership.user.email}
-                  </span>
-                </div>
-              </FloatingOptionButton>
-            ))}
-          </FloatingOptionList>
+                Cancel
+              </Button>
+              <Button
+                disabled={pending}
+                onClick={() => submitAndClose({ assigneeMembershipIds: draftAssigneeIds })}
+                type="button"
+              >
+                {pending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
         ) : null}
 
         {activeEditor === "startDate" ? (
@@ -597,12 +633,4 @@ function getFloatingPosition(rect: DOMRect, editor: Exclude<ActiveEditor, null>)
     top,
     width,
   };
-}
-
-function getInitials(value: string) {
-  return value
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
 }

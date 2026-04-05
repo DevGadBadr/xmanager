@@ -42,7 +42,7 @@ export async function createTaskAction(
       title: getFormValue(formData, "title"),
       description: getFormValue(formData, "description"),
       priority: getFormValue(formData, "priority"),
-      assigneeMembershipId: getFormValue(formData, "assigneeMembershipId") || undefined,
+      assigneeMembershipIds: getFormValues(formData, "assigneeMembershipIds"),
       startDate: getFormValue(formData, "startDate"),
       dueDate: getFormValue(formData, "dueDate"),
     });
@@ -55,7 +55,7 @@ export async function createTaskAction(
       title: values.title,
       description: values.description,
       priority: values.priority,
-      assigneeMembershipId: values.assigneeMembershipId || null,
+      assigneeMembershipIds: values.assigneeMembershipIds,
       startDate: values.startDate,
       dueDate: values.dueDate,
     });
@@ -89,7 +89,7 @@ export async function updateTaskAction(
       taskId: getFormValue(formData, "taskId"),
       status: getFormValue(formData, "status"),
       priority: getFormValue(formData, "priority"),
-      assigneeMembershipId: getFormValue(formData, "assigneeMembershipId") || undefined,
+      assigneeMembershipIds: getFormValues(formData, "assigneeMembershipIds"),
       startDate: getFormValue(formData, "startDate"),
       dueDate: getFormValue(formData, "dueDate"),
     });
@@ -100,7 +100,7 @@ export async function updateTaskAction(
       actorUserId: membership.userId,
       status: values.status,
       priority: values.priority,
-      assigneeMembershipId: values.assigneeMembershipId || null,
+      assigneeMembershipIds: values.assigneeMembershipIds,
       startDate: values.startDate,
       dueDate: values.dueDate,
     });
@@ -119,6 +119,12 @@ export async function updateTaskAction(
       message: error instanceof Error ? error.message : "Unable to update task.",
     };
   }
+}
+
+function getFormValues(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
 }
 
 export async function updateTaskContentAction(

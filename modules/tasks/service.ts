@@ -7,6 +7,19 @@ import { formatDate } from "@/lib/utils";
 import { persistCommentAttachments } from "@/lib/comment-attachments";
 import { createNotification } from "@/modules/notifications/service";
 
+const taskAssigneeInclude = {
+  include: {
+    membership: {
+      include: {
+        user: true,
+      },
+    },
+  },
+  orderBy: {
+    createdAt: "asc" as const,
+  },
+};
+
 export async function getTaskDetails(taskId: string, workspaceId: string) {
   return db.task.findFirst({
     where: {
@@ -26,11 +39,7 @@ export async function getTaskDetails(taskId: string, workspaceId: string) {
           user: true,
         },
       },
-      assignee: {
-        include: {
-          user: true,
-        },
-      },
+      assignees: taskAssigneeInclude,
       comments: {
         include: {
           attachments: {
@@ -60,10 +69,11 @@ export async function createTask(input: {
   title: string;
   description?: string;
   priority: TaskPriority;
-  assigneeMembershipId?: string | null;
+  assigneeMembershipIds?: string[];
   startDate?: string;
   dueDate?: string;
 }) {
+  const assigneeMembershipIds = Array.from(new Set(input.assigneeMembershipIds ?? []));
   const task = await db.task.create({
     data: {
       workspaceId: input.workspaceId,
@@ -73,17 +83,19 @@ export async function createTask(input: {
       title: input.title,
       description: input.description || null,
       priority: input.priority,
-      assigneeMembershipId: input.assigneeMembershipId || null,
+      assignees: assigneeMembershipIds.length
+        ? {
+            create: assigneeMembershipIds.map((membershipId) => ({
+              membershipId,
+            })),
+          }
+        : undefined,
       startDate: input.startDate ? new Date(input.startDate) : null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
     },
     include: {
       project: true,
-      assignee: {
-        include: {
-          user: true,
-        },
-      },
+      assignees: taskAssigneeInclude,
     },
   });
 
@@ -101,26 +113,33 @@ export async function createTask(input: {
     },
   });
 
-  if (task.assignee?.user) {
+  if (task.assignees.length > 0) {
     const env = getEnv();
 
     await Promise.all([
-      createNotification({
-        workspaceId: input.workspaceId,
-        userId: task.assignee.user.id,
-        type: "TASK_ASSIGNMENT",
-        title: "New task assigned",
-        body: task.title,
-        link: `/tasks/${task.id}`,
-      }),
-      sendTaskAssignmentEmail({
-        to: task.assignee.user.email,
-        fullName: task.assignee.user.fullName ?? task.assignee.user.name ?? task.assignee.user.email,
-        taskTitle: task.title,
-        projectName: task.project.name,
-        dueDate: formatDate(task.dueDate),
-        taskUrl: `${env.APP_URL}/tasks/${task.id}`,
-      }),
+      ...task.assignees.map((assignment) =>
+        createNotification({
+          workspaceId: input.workspaceId,
+          userId: assignment.membership.user.id,
+          type: "TASK_ASSIGNMENT",
+          title: "New task assigned",
+          body: task.title,
+          link: `/tasks/${task.id}`,
+        }),
+      ),
+      ...task.assignees.map((assignment) =>
+        sendTaskAssignmentEmail({
+          to: assignment.membership.user.email,
+          fullName:
+            assignment.membership.user.fullName ??
+            assignment.membership.user.name ??
+            assignment.membership.user.email,
+          taskTitle: task.title,
+          projectName: task.project.name,
+          dueDate: formatDate(task.dueDate),
+          taskUrl: `${env.APP_URL}/tasks/${task.id}`,
+        }),
+      ),
     ]);
   }
 
@@ -149,7 +168,7 @@ export async function updateTask(input: {
   actorUserId: string;
   status: TaskStatus;
   priority: TaskPriority;
-  assigneeMembershipId?: string | null;
+  assigneeMembershipIds?: string[];
   startDate?: string;
   dueDate?: string;
 }) {
@@ -161,9 +180,16 @@ export async function updateTask(input: {
     },
     include: {
       project: true,
+      assignees: taskAssigneeInclude,
     },
   });
 
+  const assigneeMembershipIds = Array.from(new Set(input.assigneeMembershipIds ?? []));
+  const existingAssigneeIds = existing.assignees.map((assignment) => assignment.membershipId);
+  const hasAssignmentChanges =
+    assigneeMembershipIds.length !== existingAssigneeIds.length ||
+    assigneeMembershipIds.some((membershipId) => !existingAssigneeIds.includes(membershipId));
+  const addedAssigneeIds = assigneeMembershipIds.filter((membershipId) => !existingAssigneeIds.includes(membershipId));
   const nextCompletedAt = input.status === "DONE" ? new Date() : null;
   const task = await db.task.update({
     where: {
@@ -172,18 +198,19 @@ export async function updateTask(input: {
     data: {
       status: input.status,
       priority: input.priority,
-      assigneeMembershipId: input.assigneeMembershipId || null,
+      assignees: {
+        deleteMany: {},
+        create: assigneeMembershipIds.map((membershipId) => ({
+          membershipId,
+        })),
+      },
       startDate: input.startDate ? new Date(input.startDate) : null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       completedAt: nextCompletedAt,
     },
     include: {
       project: true,
-      assignee: {
-        include: {
-          user: true,
-        },
-      },
+      assignees: taskAssigneeInclude,
     },
   });
 
@@ -193,36 +220,44 @@ export async function updateTask(input: {
       actorUserId: input.actorUserId,
       entityType: "TASK",
       entityId: task.id,
-      action:
-        existing.assigneeMembershipId !== task.assigneeMembershipId ? "ASSIGNED" : "STATUS_CHANGED",
+      action: hasAssignmentChanges ? "ASSIGNED" : "STATUS_CHANGED",
       message:
-        existing.assigneeMembershipId !== task.assigneeMembershipId
-          ? `Reassigned task ${task.title}`
+        hasAssignmentChanges
+          ? `Updated assignees for task ${task.title}`
           : `Updated task ${task.title}`,
     },
   });
 
-  if (task.assignee?.user && existing.assigneeMembershipId !== task.assigneeMembershipId) {
+  const newAssignments = task.assignees.filter((assignment) => addedAssigneeIds.includes(assignment.membershipId));
+
+  if (newAssignments.length > 0) {
     const env = getEnv();
 
     await Promise.all([
-      createNotification({
-        workspaceId: input.workspaceId,
-        userId: task.assignee.user.id,
-        type: "TASK_REASSIGNMENT",
-        title: "Task reassigned",
-        body: task.title,
-        link: `/tasks/${task.id}`,
-      }),
-      sendTaskAssignmentEmail({
-        to: task.assignee.user.email,
-        fullName: task.assignee.user.fullName ?? task.assignee.user.name ?? task.assignee.user.email,
-        taskTitle: task.title,
-        projectName: task.project.name,
-        dueDate: formatDate(task.dueDate),
-        taskUrl: `${env.APP_URL}/tasks/${task.id}`,
-        reassigned: true,
-      }),
+      ...newAssignments.map((assignment) =>
+        createNotification({
+          workspaceId: input.workspaceId,
+          userId: assignment.membership.user.id,
+          type: "TASK_REASSIGNMENT",
+          title: "Task reassigned",
+          body: task.title,
+          link: `/tasks/${task.id}`,
+        }),
+      ),
+      ...newAssignments.map((assignment) =>
+        sendTaskAssignmentEmail({
+          to: assignment.membership.user.email,
+          fullName:
+            assignment.membership.user.fullName ??
+            assignment.membership.user.name ??
+            assignment.membership.user.email,
+          taskTitle: task.title,
+          projectName: task.project.name,
+          dueDate: formatDate(task.dueDate),
+          taskUrl: `${env.APP_URL}/tasks/${task.id}`,
+          reassigned: true,
+        }),
+      ),
     ]);
   }
 

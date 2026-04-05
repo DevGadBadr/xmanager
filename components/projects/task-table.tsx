@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { DeleteTaskButton } from "@/components/forms/delete-task-button";
 import { useAppNavigation } from "@/components/providers/app-navigation-provider";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TaskAssigneeGroup, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -26,13 +26,7 @@ type TaskRow = {
   priority: string;
   startDate: Date | string | null;
   dueDate: Date | string | null;
-  assigneeMembershipId: string | null;
-  assignee?: {
-    user: {
-      fullName: string | null;
-      email: string;
-    };
-  } | null;
+  assignees: TaskAssigneeView[];
 };
 
 export function ProjectTaskTable({
@@ -118,41 +112,18 @@ export function ProjectTaskTable({
                 </Badge>
               </button>
 
-              <button
-                aria-pressed={activeQuickFilter?.type === "assignee" && activeQuickFilter.value === task.assigneeMembershipId}
-                className={cn(
-                  "appearance-none border-0 flex min-w-0 max-w-full items-center gap-2 rounded-full px-1.5 py-1 text-left transition hover:bg-zinc-100 dark:hover:bg-zinc-800/80",
-                  activeQuickFilter?.type === "assignee" &&
-                    activeQuickFilter.value === task.assigneeMembershipId &&
-                    "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-                  !task.assigneeMembershipId && "cursor-default hover:bg-transparent dark:hover:bg-transparent",
-                )}
-                disabled={!task.assigneeMembershipId}
-                onClick={(event) => {
-                  event.stopPropagation();
-
-                  if (!task.assigneeMembershipId) {
-                    return;
-                  }
-
-                  onAssigneeClick(task.assigneeMembershipId);
-                }}
-                type="button"
-              >
-                <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarFallback>{getInitials(task.assignee?.user.fullName ?? task.assignee?.user.email)}</AvatarFallback>
-                </Avatar>
-                <span
-                  className={cn(
-                    "truncate text-sm",
-                    activeQuickFilter?.type === "assignee" && activeQuickFilter.value === task.assigneeMembershipId
-                      ? "text-current"
-                      : "text-zinc-600 dark:text-zinc-300",
+              <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                <TaskAssigneeGroup
+                  activeMembershipId={activeQuickFilter?.type === "assignee" ? activeQuickFilter.value : null}
+                  assignees={task.assignees}
+                  onAssigneeClick={onAssigneeClick}
+                  triggerClassName={cn(
+                    activeQuickFilter?.type === "assignee" &&
+                      task.assignees.some((assignee) => assignee.membershipId === activeQuickFilter.value) &&
+                      "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
                   )}
-                >
-                  {task.assignee?.user.fullName ?? task.assignee?.user.email ?? "Unassigned"}
-                </span>
-              </button>
+                />
+              </div>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -186,41 +157,18 @@ export function ProjectTaskTable({
                   <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">{task.title}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    aria-pressed={activeQuickFilter?.type === "assignee" && activeQuickFilter.value === task.assigneeMembershipId}
-                    className={cn(
-                      "appearance-none border-0 flex items-center gap-2.5 rounded-full px-1.5 py-1 text-left transition hover:bg-zinc-100 dark:hover:bg-zinc-800/80",
-                      activeQuickFilter?.type === "assignee" &&
-                        activeQuickFilter.value === task.assigneeMembershipId &&
-                        "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-                      !task.assigneeMembershipId && "cursor-default hover:bg-transparent dark:hover:bg-transparent",
-                    )}
-                    disabled={!task.assigneeMembershipId}
-                    onClick={(event) => {
-                      event.stopPropagation();
-
-                      if (!task.assigneeMembershipId) {
-                        return;
-                      }
-
-                      onAssigneeClick(task.assigneeMembershipId);
-                    }}
-                    type="button"
-                  >
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback>{getInitials(task.assignee?.user.fullName ?? task.assignee?.user.email)}</AvatarFallback>
-                    </Avatar>
-                    <span
-                      className={cn(
-                        "text-sm",
-                        activeQuickFilter?.type === "assignee" && activeQuickFilter.value === task.assigneeMembershipId
-                          ? "text-current"
-                          : "text-zinc-600 dark:text-zinc-300",
+                  <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                    <TaskAssigneeGroup
+                      activeMembershipId={activeQuickFilter?.type === "assignee" ? activeQuickFilter.value : null}
+                      assignees={task.assignees}
+                      onAssigneeClick={onAssigneeClick}
+                      triggerClassName={cn(
+                        activeQuickFilter?.type === "assignee" &&
+                          task.assignees.some((assignee) => assignee.membershipId === activeQuickFilter.value) &&
+                          "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
                       )}
-                    >
-                      {task.assignee?.user.fullName ?? task.assignee?.user.email ?? "Unassigned"}
-                    </span>
-                  </button>
+                    />
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <button
@@ -265,19 +213,6 @@ export function ProjectTaskTable({
 
 function formatTaskStatus(status: string) {
   return status.replaceAll("_", " ");
-}
-
-function getInitials(value?: string | null) {
-  if (!value) {
-    return "NA";
-  }
-
-  return value
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function TaskMetaCard({ label, value }: { label: string; value: string }) {

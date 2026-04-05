@@ -53,6 +53,13 @@ export default async function TaskDetailsPage({
   }
 
   const canEditContent = canManageTasks || task.creatorMembershipId === membership.id;
+  const editableTask = {
+    ...task,
+    assignees: task.assignees.map((assignment) => ({
+      membershipId: assignment.membershipId,
+      user: assignment.membership.user,
+    })),
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -99,7 +106,7 @@ export default async function TaskDetailsPage({
             canManageTasks={canManageTasks}
             memberships={memberships}
             projectName={task.project.name}
-            task={task}
+            task={editableTask}
           />
         </CardContent>
       </Card>

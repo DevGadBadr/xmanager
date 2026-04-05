@@ -98,9 +98,16 @@ export async function getProjectWorkspace(
           isArchived: false,
         },
         include: {
-          assignee: {
+          assignees: {
             include: {
-              user: true,
+              membership: {
+                include: {
+                  user: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
             },
           },
         },
@@ -150,9 +157,16 @@ export async function getProjectDetails(projectId: string, workspaceId: string) 
           isArchived: false,
         },
         include: {
-          assignee: {
+          assignees: {
             include: {
-              user: true,
+              membership: {
+                include: {
+                  user: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
             },
           },
         },

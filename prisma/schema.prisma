@@ -139,27 +139,27 @@ model Workspace {
 }
 
 model Membership {
-  id                String          @id @default(cuid())
-  workspaceId       String
-  userId            String
-  role              Role
-  status            MembershipStatus @default(ACTIVE)
-  joinedAt          DateTime        @default(now())
-  isArchived        Boolean         @default(false)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  teamLinks         TeamMember[]
-  managedTeams      Team[]          @relation("TeamManager")
-  invitedRecords    Invitation[]    @relation("InvitedByMembership")
-  acceptedInvites   Invitation[]    @relation("AcceptedByMembership")
-  ownedProjects     Project[]       @relation("ProjectOwner")
-  projectMembers    ProjectMember[]
-  createdTasks      Task[]          @relation("TaskCreator")
-  reportedTasks     Task[]          @relation("TaskReporter")
-  assignedTasks     Task[]          @relation("TaskAssignee")
-  comments          TaskComment[]
+  id               String           @id @default(cuid())
+  workspaceId      String
+  userId           String
+  role             Role
+  status           MembershipStatus @default(ACTIVE)
+  joinedAt         DateTime         @default(now())
+  isArchived       Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  workspace        Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamLinks        TeamMember[]
+  managedTeams     Team[]           @relation("TeamManager")
+  invitedRecords   Invitation[]     @relation("InvitedByMembership")
+  acceptedInvites  Invitation[]     @relation("AcceptedByMembership")
+  ownedProjects    Project[]        @relation("ProjectOwner")
+  projectMembers   ProjectMember[]
+  createdTasks     Task[]           @relation("TaskCreator")
+  reportedTasks    Task[]           @relation("TaskReporter")
+  taskAssignments  TaskAssignment[]
+  comments         TaskComment[]
 
   @@unique([workspaceId, userId])
   @@index([workspaceId, role])
@@ -278,33 +278,43 @@ model ProjectMember {
 }
 
 model Task {
-  id                  String        @id @default(cuid())
+  id                  String          @id @default(cuid())
   workspaceId         String
   projectId           String
   title               String
   description         String?
-  status              TaskStatus    @default(TODO)
-  priority            TaskPriority  @default(MEDIUM)
-  assigneeMembershipId String?
+  status              TaskStatus      @default(TODO)
+  priority            TaskPriority    @default(MEDIUM)
   creatorMembershipId String
   reporterMembershipId String?
   dueDate             DateTime?
   startDate           DateTime?
   completedAt         DateTime?
-  position            Int           @default(0)
-  isArchived          Boolean       @default(false)
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project             Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee            Membership?   @relation("TaskAssignee", fields: [assigneeMembershipId], references: [id], onDelete: SetNull)
-  creator             Membership    @relation("TaskCreator", fields: [creatorMembershipId], references: [id], onDelete: Restrict)
-  reporter            Membership?   @relation("TaskReporter", fields: [reporterMembershipId], references: [id], onDelete: SetNull)
+  position            Int             @default(0)
+  isArchived          Boolean         @default(false)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  workspace           Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project             Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignees           TaskAssignment[]
+  creator             Membership      @relation("TaskCreator", fields: [creatorMembershipId], references: [id], onDelete: Restrict)
+  reporter            Membership?     @relation("TaskReporter", fields: [reporterMembershipId], references: [id], onDelete: SetNull)
   comments            TaskComment[]
 
   @@index([projectId, status])
-  @@index([assigneeMembershipId, status])
   @@index([workspaceId, dueDate])
+}
+
+model TaskAssignment {
+  id           String     @id @default(cuid())
+  taskId        String
+  membershipId  String
+  createdAt     DateTime   @default(now())
+  task          Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  membership    Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, membershipId])
+  @@index([membershipId])
 }
 
 model TaskComment {

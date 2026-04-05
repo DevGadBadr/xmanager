@@ -37,6 +37,15 @@ export async function ProjectsWorkspace({
         id: membership.id,
         label: membership.user.fullName ?? membership.user.email,
       }));
+  const projectTasks = projectWorkspace
+    ? projectWorkspace.tasks.map((task) => ({
+        ...task,
+        assignees: task.assignees.map((assignment) => ({
+          membershipId: assignment.membershipId,
+          user: assignment.membership.user,
+        })),
+      }))
+    : [];
 
   return (
     <div className={cn("space-y-3", projectWorkspace && "flex h-full min-h-0 flex-1 flex-col space-y-0")}>
@@ -54,7 +63,7 @@ export async function ProjectsWorkspace({
               projectName={projectWorkspace.name}
               projects={explorer.projects}
               selectedProjectId={projectWorkspace.id}
-              tasks={projectWorkspace.tasks}
+              tasks={projectTasks}
             />
           </>
         ) : explorer.projects.length === 0 ? (

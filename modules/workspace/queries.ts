@@ -29,7 +29,11 @@ export async function getDashboardData(workspaceId: string, membershipId: string
       db.task.findMany({
         where: {
           workspaceId,
-          assigneeMembershipId: membershipId,
+          assignees: {
+            some: {
+              membershipId,
+            },
+          },
           isArchived: false,
         },
         include: {
