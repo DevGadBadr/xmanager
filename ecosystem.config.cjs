@@ -9,9 +9,9 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         APP_ENV: "production",
-        APP_BASE_PATH: "/xmanager",
+        APP_BASE_PATH: "",
         NEXT_PUBLIC_APP_ENV: "production",
-        NEXT_PUBLIC_APP_BASE_PATH: "/xmanager",
+        NEXT_PUBLIC_APP_BASE_PATH: "",
       },
     },
     {
@@ -23,9 +23,9 @@ module.exports = {
       env: {
         NODE_ENV: "development",
         APP_ENV: "development",
-        APP_BASE_PATH: "",
+        APP_BASE_PATH: "/xmanager",
         NEXT_PUBLIC_APP_ENV: "development",
-        NEXT_PUBLIC_APP_BASE_PATH: "",
+        NEXT_PUBLIC_APP_BASE_PATH: "/xmanager",
       },
     },
   ],
