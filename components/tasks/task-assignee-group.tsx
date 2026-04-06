@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Check } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 export type TaskAssigneeView = {
@@ -78,12 +79,14 @@ export function TaskAssigneeGroup({
   showLabel?: boolean;
   triggerClassName?: string;
 }) {
+  const [open, setOpen] = useState(false);
+
   if (assignees.length === 0) {
     return <span className="text-sm text-zinc-500 dark:text-zinc-400">{emptyLabel}</span>;
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={setOpen} open={open}>
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
@@ -104,14 +107,16 @@ export function TaskAssigneeGroup({
             const isActive = activeMembershipId === assignee.membershipId;
             const label = getTaskAssigneeLabel(assignee);
             return (
-              <button
+              <DropdownMenuItem
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition hover:bg-zinc-100 dark:hover:bg-zinc-800",
                   isActive && "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
                 )}
                 key={assignee.membershipId}
-                onClick={() => onAssigneeClick?.(assignee.membershipId)}
-                type="button"
+                onSelect={() => {
+                  onAssigneeClick?.(assignee.membershipId);
+                  setOpen(false);
+                }}
               >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>{getTaskAssigneeInitials(label)}</AvatarFallback>
@@ -123,7 +128,7 @@ export function TaskAssigneeGroup({
                   ) : null}
                 </div>
                 {isActive ? <Check className="h-4 w-4 shrink-0" /> : null}
-              </button>
+              </DropdownMenuItem>
             );
           })}
         </div>

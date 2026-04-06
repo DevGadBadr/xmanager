@@ -91,7 +91,107 @@ summary[aria-disabled="true"] {
   }
 }
 
+@keyframes landing-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-aurora-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 .comment-upload-progress {
   width: 38%;
   animation: comment-upload-progress 1.15s ease-in-out infinite;
+}
+
+.landing-reveal {
+  opacity: 0;
+  animation: landing-reveal 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, transform;
+}
+
+.landing-delay-1 {
+  animation-delay: 70ms;
+}
+
+.landing-delay-2 {
+  animation-delay: 140ms;
+}
+
+.landing-delay-3 {
+  animation-delay: 210ms;
+}
+
+.landing-delay-4 {
+  animation-delay: 280ms;
+}
+
+.landing-delay-5 {
+  animation-delay: 350ms;
+}
+
+.landing-aurora {
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+  opacity: 0;
+  filter: blur(14px);
+  animation: landing-aurora-in 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+.landing-aurora-left {
+  top: 5.5rem;
+  left: -4.5rem;
+  width: 19rem;
+  height: 19rem;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.22), rgba(14, 165, 233, 0));
+}
+
+.landing-aurora-right {
+  right: -5rem;
+  top: 11rem;
+  width: 22rem;
+  height: 22rem;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.16), rgba(37, 99, 235, 0));
+  animation-delay: 120ms;
+}
+
+.landing-panel {
+  border: 1px solid rgba(226, 232, 240, 0.86);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.dark .landing-panel {
+  border-color: rgba(63, 63, 70, 0.86);
+  background:
+    linear-gradient(180deg, rgba(18, 24, 33, 0.92), rgba(10, 15, 23, 0.88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal,
+  .landing-aurora {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
 }

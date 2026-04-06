@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "XManager",
-  description: "Workspace-based project and team management built with Next.js.",
+  description: "Shared workspace for invited teams to manage projects, tasks, updates, and accountability.",
 };
 
 export default function RootLayout({
