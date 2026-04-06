@@ -193,7 +193,7 @@ function formatTaskUpdateTimestamp(createdAt: Date, updatedAt: Date) {
     return createdLabel;
   }
 
-  return `${createdLabel} · edited`;
+  return `${createdLabel} · edited ${formatter.format(updatedAt)}`;
 }
 
 function TaskBackLink({

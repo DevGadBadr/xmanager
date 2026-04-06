@@ -8,14 +8,14 @@ import { cn } from "@/lib/utils";
 const markdownComponents: Components = {
   p: ({ className, ...props }) => (
     <p
-      className={cn("whitespace-pre-wrap text-sm leading-6 text-zinc-700 dark:text-zinc-300", className)}
+      className={cn("text-sm leading-6 text-zinc-700 dark:text-zinc-300", className)}
       {...props}
     />
   ),
   a: ({ className, ...props }) => (
     <a
       className={cn(
-        "font-medium text-sky-700 underline decoration-sky-300 underline-offset-2 transition hover:text-sky-800 dark:text-sky-300 dark:decoration-sky-500/50 dark:hover:text-sky-200",
+        "font-medium text-blue-600 underline decoration-blue-300 underline-offset-2 transition hover:text-blue-700 dark:text-blue-400 dark:decoration-blue-500/50 dark:hover:text-blue-300",
         className,
       )}
       rel="noreferrer"
@@ -33,7 +33,7 @@ const markdownComponents: Components = {
     />
   ),
   li: ({ className, ...props }) => (
-    <li className={cn("whitespace-pre-wrap", className)} {...props} />
+    <li className={cn(className)} {...props} />
   ),
   blockquote: ({ className, ...props }) => (
     <blockquote

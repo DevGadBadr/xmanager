@@ -21,7 +21,6 @@ export async function createProjectAction(
 
     const values = projectSchema.parse({
       name: getFormValue(formData, "name"),
-      key: getFormValue(formData, "key").toUpperCase(),
       description: getFormValue(formData, "description"),
       status: getFormValue(formData, "status"),
       dueDate: getFormValue(formData, "dueDate"),
@@ -32,7 +31,6 @@ export async function createProjectAction(
       ownerMembershipId: membership.id,
       actorUserId: membership.userId,
       name: values.name,
-      key: values.key,
       description: values.description,
       status: values.status,
       dueDate: values.dueDate,

@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 export function CommentForm({ taskId }: { taskId: string }) {
   const [state, formAction, pending] = useActionState(addTaskCommentAction, initialActionState);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [bodyValue, setBodyValue] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const onSuccess = useEffectEvent((message: string) => {
@@ -21,6 +23,8 @@ export function CommentForm({ taskId }: { taskId: string }) {
       fileInputRef.current.value = "";
     }
     setSelectedFiles([]);
+    setBodyValue("");
+    setExpanded(false);
   });
   const onError = useEffectEvent((message: string) => {
     toast.error(message);
@@ -49,16 +53,27 @@ export function CommentForm({ taskId }: { taskId: string }) {
     >
       <input name="taskId" type="hidden" value={taskId} />
       <Textarea
-        className="min-h-[7.5rem]"
+        className={expanded || bodyValue.trim().length > 0 ? "min-h-[5.5rem]" : "min-h-[2.75rem]"}
         name="body"
-        placeholder={"Share progress, blockers, or context.\n\nSupports links, lists, quotes, `code`, and preserved spacing."}
-        rows={6}
+        onBlur={() => {
+          if (bodyValue.trim().length === 0 && selectedFiles.length === 0) {
+            setExpanded(false);
+          }
+        }}
+        onChange={(event) => setBodyValue(event.target.value)}
+        onFocus={() => setExpanded(true)}
+        placeholder="Share progress, blockers, or context."
+        rows={expanded || bodyValue.trim().length > 0 ? 4 : 2}
+        value={bodyValue}
       />
       <input
         className="hidden"
         multiple
         name="attachments"
-        onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
+        onChange={(event) => {
+          setSelectedFiles(Array.from(event.target.files ?? []));
+          setExpanded(true);
+        }}
         ref={fileInputRef}
         type="file"
       />

@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FileText, PencilLine } from "lucide-react";
+import { FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { initialActionState } from "@/lib/action-state";
@@ -131,12 +131,11 @@ export function TaskContentEditor({
       <div className="space-y-2">
         {canEditContent ? (
           <button
-            className="flex max-w-full items-center gap-2 rounded-xl text-left transition hover:text-sky-700 dark:hover:text-sky-300"
+            className="block max-w-full rounded-xl text-left transition hover:text-sky-700 dark:hover:text-sky-300"
             onClick={(event) => openEditor("title", event.currentTarget)}
             type="button"
           >
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h2>
-            <PencilLine className="h-4 w-4 shrink-0 text-zinc-400" />
           </button>
         ) : (
           <h2 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h2>

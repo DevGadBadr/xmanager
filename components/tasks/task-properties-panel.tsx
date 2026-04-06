@@ -41,6 +41,9 @@ export function TaskPropertiesPanel({
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const taskEditorKey = `${task.id}:${task.status}:${task.priority}:${task.startDate ?? ""}:${task.dueDate ?? ""}:${task.assignees
+    .map((assignee) => assignee.membershipId)
+    .join(",")}`;
 
   useEffect(() => {
     if (!open) {
@@ -51,6 +54,10 @@ export function TaskPropertiesPanel({
       const target = event.target;
 
       if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (target instanceof Element && target.closest("[data-task-inline-editor-floating='true']")) {
         return;
       }
 
@@ -91,6 +98,7 @@ export function TaskPropertiesPanel({
         <div className="absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
           <TaskInlineEditor
             canManageTasks={canManageTasks}
+            key={taskEditorKey}
             memberships={memberships}
             projectName={projectName}
             task={task}

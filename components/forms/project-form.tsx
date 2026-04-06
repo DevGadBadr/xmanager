@@ -32,7 +32,6 @@ export function ProjectForm({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: "",
-      key: "",
       description: "",
       status: "PLANNING",
       dueDate: "",
@@ -44,7 +43,6 @@ export function ProjectForm({
       toast.success(state.message);
       form.reset({
         name: "",
-        key: "",
         description: "",
         status: "PLANNING",
         dueDate: "",
@@ -68,22 +66,15 @@ export function ProjectForm({
           onSubmit={form.handleSubmit((values) => {
             const payload = new FormData();
             payload.set("name", values.name);
-            payload.set("key", values.key);
             payload.set("description", values.description ?? "");
             payload.set("status", values.status);
             payload.set("dueDate", values.dueDate ?? "");
             startTransition(() => formAction(payload));
           })}
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="project-name">Name</Label>
-              <Input id="project-name" {...form.register("name")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="project-key">Key</Label>
-              <Input id="project-key" placeholder="OPS" {...form.register("key")} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="project-name">Name</Label>
+            <Input id="project-name" {...form.register("name")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="project-description">Description</Label>

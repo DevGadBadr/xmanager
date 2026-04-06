@@ -62,7 +62,6 @@ type BoardColumn = {
 
 type ProjectOption = {
   id: string;
-  key: string | null;
   name: string;
   openTaskCount: number;
   status: string | null;
@@ -311,7 +310,6 @@ export function ProjectWorkspaceView({
                                 <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="truncate font-medium text-zinc-950 dark:text-zinc-50">{project.name}</span>
-                                    {project.key ? <Badge variant="neutral">{project.key}</Badge> : null}
                                     {project.status ? <Badge variant="default">{project.status}</Badge> : null}
                                   </div>
                                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{project.openTaskCount} open tasks</p>

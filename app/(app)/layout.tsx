@@ -21,7 +21,13 @@ export default async function AppLayout({
 
   return (
     <AppShell
-      sidebar={<AppSidebar explorer={projectExplorer} workspaceName={membership.workspace.name} />}
+      sidebar={
+        <AppSidebar
+          explorer={projectExplorer}
+          storageScope={`${membership.userId}:${membership.workspaceId}`}
+          workspaceName={membership.workspace.name}
+        />
+      }
       topbar={<AppTopbar notifications={notifications} unreadCount={unreadCount} user={membership.user} />}
     >
       {children}

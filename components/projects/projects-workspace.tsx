@@ -113,7 +113,6 @@ export async function ProjectsWorkspace({
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">{project.name}</p>
-                          {project.key ? <Badge variant="neutral">{project.key}</Badge> : null}
                           {project.status ? <Badge variant="default">{project.status}</Badge> : null}
                         </div>
                         {project.description ? (

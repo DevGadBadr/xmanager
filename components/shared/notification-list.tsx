@@ -1,10 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
-import { useSyncAppBusyState } from "@/components/providers/app-navigation-provider";
+import { useAppNavigation } from "@/components/providers/app-navigation-provider";
 import { PendingLink } from "@/components/shared/pending-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,25 +20,22 @@ type NotificationItem = {
 };
 
 export function NotificationList({ items }: { items: NotificationItem[] }) {
-  const [pending, startTransition] = useTransition();
   const router = useRouter();
-
-  useSyncAppBusyState("open-notification", pending, "Opening notification...");
+  const { startNavigation } = useAppNavigation();
 
   const markReadAndNavigate = (notificationId: string, href: string | null) => {
-    startTransition(async () => {
-      try {
-        await fetch(ensureAppPath(`/api/notifications/read/${notificationId}`), {
-          method: "POST",
-        });
-      } finally {
-        if (href) {
-          router.push(href);
-        }
+    void fetch(ensureAppPath(`/api/notifications/read/${notificationId}`), {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => undefined);
 
-        router.refresh();
-      }
-    });
+    if (href) {
+      startNavigation(href, "Opening notification...");
+      router.push(href);
+      return;
+    }
+
+    router.refresh();
   };
 
   return (

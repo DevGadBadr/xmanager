@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { useSyncAppBusyState } from "@/components/providers/app-navigation-provider";
+import { useAppNavigation } from "@/components/providers/app-navigation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,27 +33,24 @@ export function NotificationMenu({
   unreadCount: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
   const router = useRouter();
-
-  useSyncAppBusyState("open-notification-menu-item", pending, "Opening notification...");
+  const { startNavigation } = useAppNavigation();
 
   const handleOpenItem = (item: NotificationMenuItem) => {
-    startTransition(async () => {
-      try {
-        await fetch(ensureAppPath(`/api/notifications/read/${item.id}`), {
-          method: "POST",
-        });
-      } finally {
-        setOpen(false);
+    setOpen(false);
 
-        if (item.link) {
-          router.push(item.link);
-        }
+    void fetch(ensureAppPath(`/api/notifications/read/${item.id}`), {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => undefined);
 
-        router.refresh();
-      }
-    });
+    if (item.link) {
+      startNavigation(item.link, "Opening notification...");
+      router.push(item.link);
+      return;
+    }
+
+    router.refresh();
   };
 
   return (

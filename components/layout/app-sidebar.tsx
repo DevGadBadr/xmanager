@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   Bell,
@@ -27,6 +27,7 @@ const navigation = [
 export function AppSidebar({
   workspaceName,
   explorer,
+  storageScope,
   mode = "desktop",
   onNavigate,
 }: {
@@ -39,8 +40,14 @@ export function AppSidebar({
       status?: string;
       taskCount?: number;
       openTaskCount?: number;
+      tasks?: Array<{
+        id: string;
+        name: string;
+        status?: string;
+      }>;
     }>;
   };
+  storageScope: string;
   mode?: "desktop" | "mobile";
   onNavigate?: () => void;
 }) {
@@ -54,7 +61,34 @@ export function AppSidebar({
     : projectIdFromReturnTo;
   const isProjectsContext = isProjectsRoute || Boolean(projectIdFromReturnTo);
   const isMobile = mode === "mobile";
-  const [projectsExpanded, setProjectsExpanded] = useState(true);
+  const [projectsExpanded, setProjectsExpanded] = useState(false);
+  const [projectsExpandedReady, setProjectsExpandedReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const storedValue = window.localStorage.getItem(getProjectsVisibilityStorageKey(storageScope));
+
+      if (storedValue !== null) {
+        setProjectsExpanded(storedValue === "true");
+      }
+    } catch {
+      // Ignore storage access failures and keep the default visible state.
+    } finally {
+      setProjectsExpandedReady(true);
+    }
+  }, [storageScope]);
+
+  useEffect(() => {
+    if (!projectsExpandedReady) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(getProjectsVisibilityStorageKey(storageScope), String(projectsExpanded));
+    } catch {
+      // Ignore storage access failures and keep the in-memory state only.
+    }
+  }, [projectsExpanded, projectsExpandedReady, storageScope]);
 
   return (
     <aside
@@ -155,6 +189,8 @@ export function AppSidebar({
                     assets={explorer.projects}
                     basePath="/projects"
                     selectedAssetId={selectedProjectId}
+                    storageScope={storageScope}
+                    selectedTaskId={pathname.startsWith("/tasks/") ? pathname.split("/")[2] ?? null : null}
                     title="Projects"
                     variant="sidebar"
                     onSelect={onNavigate}
@@ -167,4 +203,8 @@ export function AppSidebar({
       </nav>
     </aside>
   );
+}
+
+function getProjectsVisibilityStorageKey(storageScope: string) {
+  return `xmanager:sidebar:${storageScope}:projects-visible`;
 }

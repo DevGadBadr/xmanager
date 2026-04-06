@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Calendar, Check, ChevronDown, CirclePlus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -75,8 +75,13 @@ export function TaskInlineEditor({
   task: EditableTask;
   variant?: "default" | "sidebar";
 }) {
-  const [state, formAction, pending] = useActionState(updateTaskAction, initialActionState);
   const [activeEditor, setActiveEditor] = useState<ActiveEditor>(null);
+  const [pending, startUpdateTransition] = useTransition();
+  const [currentStatus, setCurrentStatus] = useState(task.status);
+  const [currentPriority, setCurrentPriority] = useState(task.priority);
+  const [currentStartDate, setCurrentStartDate] = useState(formatDateInput(task.startDate));
+  const [currentDueDate, setCurrentDueDate] = useState(formatDateInput(task.dueDate));
+  const [currentAssigneeIds, setCurrentAssigneeIds] = useState<string[]>(task.assignees.map((assignee) => assignee.membershipId));
   const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null);
   const [position, setPosition] = useState<FloatingPosition | null>(null);
   const [draftStartDate, setDraftStartDate] = useState(formatDateInput(task.startDate));
@@ -86,12 +91,12 @@ export function TaskInlineEditor({
   const selectedAssignees = useMemo(
     () =>
       memberships
-        .filter((membership) => task.assignees.some((assignee) => assignee.membershipId === membership.id))
+        .filter((membership) => currentAssigneeIds.includes(membership.id))
         .map((membership) => ({
           membershipId: membership.id,
           user: membership.user,
         })),
-    [memberships, task.assignees],
+    [currentAssigneeIds, memberships],
   );
 
   const closeEditor = () => {
@@ -99,16 +104,6 @@ export function TaskInlineEditor({
     setAnchorElement(null);
     setPosition(null);
   };
-
-  useEffect(() => {
-    if (state.status === "success" && state.message) {
-      toast.success(state.message);
-    }
-
-    if (state.status === "error" && state.message) {
-      toast.error(state.message);
-    }
-  }, [state]);
 
   useEffect(() => {
     if (!activeEditor || !anchorElement) {
@@ -120,6 +115,10 @@ export function TaskInlineEditor({
     };
 
     const handlePointerDown = (event: MouseEvent) => {
+      if (pending) {
+        return;
+      }
+
       const target = event.target;
 
       if (!(target instanceof Node)) {
@@ -134,7 +133,7 @@ export function TaskInlineEditor({
     };
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (!pending && event.key === "Escape") {
         closeEditor();
       }
     };
@@ -150,38 +149,85 @@ export function TaskInlineEditor({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [activeEditor, anchorElement]);
+  }, [activeEditor, anchorElement, pending]);
 
   const submitUpdate = (overrides: TaskUpdateOverrides) => {
+    const nextStatus = overrides.status ?? currentStatus;
+    const nextPriority = overrides.priority ?? currentPriority;
+    const nextStartDate = overrides.startDate ?? currentStartDate;
+    const nextDueDate = overrides.dueDate ?? currentDueDate;
+    const nextAssigneeIds = overrides.assigneeMembershipIds ?? currentAssigneeIds;
+    const previousState = {
+      assigneeIds: currentAssigneeIds,
+      dueDate: currentDueDate,
+      priority: currentPriority,
+      startDate: currentStartDate,
+      status: currentStatus,
+    };
     const payload = new FormData();
     payload.set("taskId", task.id);
-    payload.set("status", overrides.status ?? task.status);
-    payload.set("priority", overrides.priority ?? task.priority);
-    for (const membershipId of overrides.assigneeMembershipIds ?? task.assignees.map((assignee) => assignee.membershipId)) {
+    payload.set("status", nextStatus);
+    payload.set("priority", nextPriority);
+    for (const membershipId of nextAssigneeIds) {
       payload.append("assigneeMembershipIds", membershipId);
     }
-    payload.set("startDate", overrides.startDate ?? formatDateInput(task.startDate));
-    payload.set("dueDate", overrides.dueDate ?? formatDateInput(task.dueDate));
+    payload.set("startDate", nextStartDate);
+    payload.set("dueDate", nextDueDate);
 
-    startTransition(() => formAction(payload));
-  };
+    setCurrentStatus(nextStatus);
+    setCurrentPriority(nextPriority);
+    setCurrentStartDate(nextStartDate);
+    setCurrentDueDate(nextDueDate);
+    setCurrentAssigneeIds(nextAssigneeIds);
 
-  const submitAndClose = (overrides: TaskUpdateOverrides) => {
-    closeEditor();
-    submitUpdate(overrides);
+    if (overrides.startDate !== undefined) {
+      setDraftStartDate(nextStartDate);
+    }
+
+    if (overrides.dueDate !== undefined) {
+      setDraftDueDate(nextDueDate);
+    }
+
+    if (overrides.assigneeMembershipIds !== undefined) {
+      setDraftAssigneeIds(nextAssigneeIds);
+    }
+
+    startUpdateTransition(async () => {
+      const state = await updateTaskAction(initialActionState, payload);
+
+      if (state.status === "success") {
+        toast.success(state.message ?? "Task updated.");
+        closeEditor();
+        return;
+      }
+
+      setCurrentStatus(previousState.status);
+      setCurrentPriority(previousState.priority);
+      setCurrentStartDate(previousState.startDate);
+      setCurrentDueDate(previousState.dueDate);
+      setCurrentAssigneeIds(previousState.assigneeIds);
+      setDraftStartDate(previousState.startDate);
+      setDraftDueDate(previousState.dueDate);
+      setDraftAssigneeIds(previousState.assigneeIds);
+      toast.error(state.message ?? "Unable to update task.");
+    });
   };
 
   const openEditor = (editor: Exclude<ActiveEditor, null>, target: HTMLElement) => {
+    if (pending) {
+      return;
+    }
+
     if (editor === "startDate") {
-      setDraftStartDate(formatDateInput(task.startDate));
+      setDraftStartDate(currentStartDate);
     }
 
     if (editor === "dueDate") {
-      setDraftDueDate(formatDateInput(task.dueDate));
+      setDraftDueDate(currentDueDate);
     }
 
     if (editor === "assignee") {
-      setDraftAssigneeIds(task.assignees.map((assignee) => assignee.membershipId));
+      setDraftAssigneeIds(currentAssigneeIds);
     }
 
     const nextPosition = getFloatingPosition(target, editor);
@@ -208,10 +254,10 @@ export function TaskInlineEditor({
                   onClick={(event) => openEditor("status", event.currentTarget)}
                   open={activeEditor === "status"}
                 >
-                  <StatusBadge status={task.status} />
+                  <StatusBadge status={currentStatus} />
                 </InlineTrigger>
               ) : (
-                <StatusBadge status={task.status} />
+                <StatusBadge status={currentStatus} />
               )
             }
           />
@@ -224,10 +270,10 @@ export function TaskInlineEditor({
                   onClick={(event) => openEditor("priority", event.currentTarget)}
                   open={activeEditor === "priority"}
                 >
-                  <PriorityBadge priority={task.priority} />
+                  <PriorityBadge priority={currentPriority} />
                 </InlineTrigger>
               ) : (
-                <PriorityBadge priority={task.priority} />
+                <PriorityBadge priority={currentPriority} />
               )
             }
           />
@@ -241,10 +287,10 @@ export function TaskInlineEditor({
                   open={activeEditor === "startDate"}
                 >
                   <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-                  {formatDate(task.startDate)}
+                  {formatDate(currentStartDate)}
                 </InlineTrigger>
               ) : (
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.startDate)}</span>
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(currentStartDate)}</span>
               )
             }
           />
@@ -258,10 +304,10 @@ export function TaskInlineEditor({
                   open={activeEditor === "dueDate"}
                 >
                   <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-                  {formatDate(task.dueDate)}
+                  {formatDate(currentDueDate)}
                 </InlineTrigger>
               ) : (
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.dueDate)}</span>
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(currentDueDate)}</span>
               )
             }
           />
@@ -322,10 +368,10 @@ export function TaskInlineEditor({
                     onClick={(event) => openEditor("status", event.currentTarget)}
                     open={activeEditor === "status"}
                   >
-                    <StatusBadge status={task.status} />
+                    <StatusBadge status={currentStatus} />
                   </InlineTrigger>
                 ) : (
-                  <StatusBadge status={task.status} />
+                  <StatusBadge status={currentStatus} />
                 )
               }
             />
@@ -338,10 +384,10 @@ export function TaskInlineEditor({
                     onClick={(event) => openEditor("priority", event.currentTarget)}
                     open={activeEditor === "priority"}
                   >
-                    <PriorityBadge priority={task.priority} />
+                    <PriorityBadge priority={currentPriority} />
                   </InlineTrigger>
                 ) : (
-                  <PriorityBadge priority={task.priority} />
+                  <PriorityBadge priority={currentPriority} />
                 )
               }
             />
@@ -355,10 +401,10 @@ export function TaskInlineEditor({
                     open={activeEditor === "startDate"}
                   >
                     <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-                    {formatDate(task.startDate)}
+                    {formatDate(currentStartDate)}
                   </InlineTrigger>
                 ) : (
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.startDate)}</span>
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(currentStartDate)}</span>
                 )
               }
             />
@@ -372,10 +418,10 @@ export function TaskInlineEditor({
                     open={activeEditor === "dueDate"}
                   >
                     <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-                    {formatDate(task.dueDate)}
+                    {formatDate(currentDueDate)}
                   </InlineTrigger>
                 ) : (
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.dueDate)}</span>
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(currentDueDate)}</span>
                 )
               }
             />
@@ -432,9 +478,9 @@ export function TaskInlineEditor({
             {STATUS_OPTIONS.map((option) => (
               <FloatingOptionButton
                 key={option.value}
-                onClick={() => submitAndClose({ status: option.value })}
+                onClick={() => submitUpdate({ status: option.value })}
                 pending={pending}
-                selected={task.status === option.value}
+                selected={currentStatus === option.value}
               >
                 <StatusBadge status={option.value} />
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">{option.label}</span>
@@ -448,9 +494,9 @@ export function TaskInlineEditor({
             {PRIORITY_OPTIONS.map((option) => (
               <FloatingOptionButton
                 key={option.value}
-                onClick={() => submitAndClose({ priority: option.value })}
+                onClick={() => submitUpdate({ priority: option.value })}
                 pending={pending}
-                selected={task.priority === option.value}
+                selected={currentPriority === option.value}
               >
                 <PriorityBadge priority={option.value} />
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">{option.label}</span>
@@ -466,6 +512,7 @@ export function TaskInlineEditor({
                 "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition hover:bg-zinc-50 dark:hover:bg-zinc-800",
                 draftAssigneeIds.length === 0 && "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
               )}
+              disabled={pending}
               onClick={() => setDraftAssigneeIds([])}
               type="button"
             >
@@ -481,6 +528,7 @@ export function TaskInlineEditor({
                       "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-800",
                       selected && "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
                     )}
+                    disabled={pending}
                     key={membership.id}
                     onClick={() =>
                       setDraftAssigneeIds((current) =>
@@ -504,8 +552,9 @@ export function TaskInlineEditor({
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-zinc-200 px-2 pt-2 dark:border-zinc-800">
               <Button
+                disabled={pending}
                 onClick={() => {
-                  setDraftAssigneeIds(task.assignees.map((assignee) => assignee.membershipId));
+                  setDraftAssigneeIds(currentAssigneeIds);
                   closeEditor();
                 }}
                 type="button"
@@ -515,7 +564,7 @@ export function TaskInlineEditor({
               </Button>
               <Button
                 disabled={pending}
-                onClick={() => submitAndClose({ assigneeMembershipIds: draftAssigneeIds })}
+                onClick={() => submitUpdate({ assigneeMembershipIds: draftAssigneeIds })}
                 type="button"
               >
                 {pending ? "Saving..." : "Save"}
@@ -527,11 +576,11 @@ export function TaskInlineEditor({
         {activeEditor === "startDate" ? (
           <FloatingDateEditor
             onCancel={() => {
-              setDraftStartDate(formatDateInput(task.startDate));
+              setDraftStartDate(currentStartDate);
               closeEditor();
             }}
             onChange={setDraftStartDate}
-            onSave={() => submitAndClose({ startDate: draftStartDate })}
+            onSave={() => submitUpdate({ startDate: draftStartDate })}
             pending={pending}
             value={draftStartDate}
           />
@@ -540,11 +589,11 @@ export function TaskInlineEditor({
         {activeEditor === "dueDate" ? (
           <FloatingDateEditor
             onCancel={() => {
-              setDraftDueDate(formatDateInput(task.dueDate));
+              setDraftDueDate(currentDueDate);
               closeEditor();
             }}
             onChange={setDraftDueDate}
-            onSave={() => submitAndClose({ dueDate: draftDueDate })}
+            onSave={() => submitUpdate({ dueDate: draftDueDate })}
             pending={pending}
             value={draftDueDate}
           />
@@ -637,6 +686,7 @@ function FloatingEditorShell({
 
   return createPortal(
     <div
+      data-task-inline-editor-floating="true"
       ref={panelRef}
       className="fixed z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
       style={{

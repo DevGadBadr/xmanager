@@ -1,4 +1,5 @@
-import type { ProjectStatus } from "@prisma/client";
+import { randomBytes } from "node:crypto";
+import { Prisma, type ProjectStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
 
@@ -42,8 +43,17 @@ export async function listProjectExplorer(workspaceId: string) {
         },
         select: {
           id: true,
+          title: true,
           status: true,
         },
+        orderBy: [
+          {
+            dueDate: "asc",
+          },
+          {
+            createdAt: "desc",
+          },
+        ],
       },
     },
     orderBy: [
@@ -63,6 +73,11 @@ export async function listProjectExplorer(workspaceId: string) {
       ownerMembershipId: project.ownerMembershipId,
       taskCount: project.tasks.length,
       openTaskCount: project.tasks.filter((task) => task.status !== "DONE" && task.status !== "CANCELLED").length,
+      tasks: project.tasks.map((task) => ({
+        id: task.id,
+        name: task.title,
+        status: task.status,
+      })),
     })),
   };
 }
@@ -188,27 +203,41 @@ export async function createProject(input: {
   ownerMembershipId: string;
   actorUserId: string;
   name: string;
-  key: string;
   description?: string;
   status: ProjectStatus;
   dueDate?: string;
 }) {
-  const project = await db.project.create({
-    data: {
-      workspaceId: input.workspaceId,
-      ownerMembershipId: input.ownerMembershipId,
-      name: input.name,
-      key: input.key,
-      description: input.description || null,
-      status: input.status,
-      dueDate: input.dueDate ? new Date(input.dueDate) : null,
-      members: {
-        create: {
-          membershipId: input.ownerMembershipId,
+  let project: Awaited<ReturnType<typeof db.project.create>> | null = null;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      project = await db.project.create({
+        data: {
+          workspaceId: input.workspaceId,
+          ownerMembershipId: input.ownerMembershipId,
+          name: input.name,
+          key: generateInternalProjectKey(),
+          description: input.description || null,
+          status: input.status,
+          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+          members: {
+            create: {
+              membershipId: input.ownerMembershipId,
+            },
+          },
         },
-      },
-    },
-  });
+      });
+      break;
+    } catch (error) {
+      if (!isProjectKeyConflict(error) || attempt === 4) {
+        throw error;
+      }
+    }
+  }
+
+  if (!project) {
+    throw new Error("Unable to create project.");
+  }
 
   await db.activityLog.create({
     data: {
@@ -225,6 +254,20 @@ export async function createProject(input: {
   });
 
   return project;
+}
+
+function generateInternalProjectKey() {
+  return `PRJ${randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+function isProjectKeyConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    error.meta.target.includes("workspaceId") &&
+    error.meta.target.includes("key")
+  );
 }
 
 export async function getProjectEditContext(projectId: string, workspaceId: string) {
