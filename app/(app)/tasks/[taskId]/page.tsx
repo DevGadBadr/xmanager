@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PendingLink } from "@/components/shared/pending-link";
 import { TaskCommentActionsMenu } from "@/components/tasks/task-comment-actions-menu";
 import { TaskContentEditor } from "@/components/tasks/task-content-editor";
-import { TaskInlineEditor } from "@/components/tasks/task-inline-editor";
+import { TaskPropertiesPanel } from "@/components/tasks/task-properties-panel";
 import { TaskUpdateBody } from "@/components/tasks/task-update-body";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,102 +70,100 @@ export default async function TaskDetailsPage({
 
       <Card className="border-zinc-200/80 bg-white/95 dark:border-zinc-800/80 dark:bg-zinc-900/95">
         <CardHeader>
-          <TaskContentEditor
-            canEditContent={canEditContent}
-            description={task.description}
-            taskId={task.id}
-            title={task.title}
-          />
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_320px]">
-            <div className="order-1 space-y-5">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle>Updates</CardTitle>
-                <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">
-                  {task.comments.length} update{task.comments.length === 1 ? "" : "s"}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {task.comments.length > 0 ? (
-                  task.comments.map((comment) => (
-                    <div className="rounded-2xl border border-zinc-200 bg-white/90 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40" key={comment.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                            {comment.author.user.fullName ?? comment.author.user.email}
-                          </p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {formatTaskUpdateTimestamp(comment.createdAt, comment.updatedAt)}
-                          </p>
-                        </div>
-                        {comment.authorMembershipId === membership.id ? (
-                          <TaskCommentActionsMenu commentBody={comment.body} commentId={comment.id} />
-                        ) : null}
-                      </div>
-                      <TaskUpdateBody body={comment.body} className="mt-3" />
-                      {comment.attachments.some((attachment) => isImageAttachment(attachment)) ? (
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {comment.attachments.filter(isImageAttachment).map((attachment) => (
-                            <a
-                              className="group overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 transition hover:border-sky-200 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-sky-500/30"
-                              href={ensureAppPath(attachment.filePath)}
-                              key={attachment.id}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              <Image
-                                alt={attachment.fileName}
-                                className="h-52 w-full object-cover transition duration-200 group-hover:scale-[1.02]"
-                                height={720}
-                                loading="lazy"
-                                src={resolveAppAssetUrl(attachment.filePath) ?? ensureAppPath(attachment.filePath)}
-                                unoptimized
-                                width={1200}
-                              />
-                              <div className="border-t border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-300">
-                                {attachment.fileName}
-                              </div>
-                            </a>
-                          ))}
-                        </div>
-                      ) : null}
-                      {comment.attachments.some((attachment) => !isImageAttachment(attachment)) ? (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {comment.attachments.filter((attachment) => !isImageAttachment(attachment)).map((attachment) => (
-                            <a
-                              className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-sky-200 hover:text-sky-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-sky-500/30 dark:hover:text-sky-300"
-                              href={ensureAppPath(attachment.filePath)}
-                              key={attachment.id}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              {attachment.fileName}
-                            </a>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">No updates yet.</p>
-                )}
-              </div>
-
-              <Separator />
-              <CommentForm taskId={task.id} />
-            </div>
-
-            <div className="order-2 xl:border-l xl:border-zinc-200 xl:pl-6 dark:xl:border-zinc-800">
-              <TaskInlineEditor
-                canManageTasks={canManageTasks}
-                memberships={memberships}
-                projectName={task.project.name}
-                task={editableTask}
-                variant="sidebar"
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <TaskContentEditor
+                canEditContent={canEditContent}
+                description={task.description}
+                taskId={task.id}
+                title={task.title}
               />
             </div>
+            <TaskPropertiesPanel
+              canManageTasks={canManageTasks}
+              memberships={memberships}
+              projectName={task.project.name}
+              task={editableTask}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>Updates</CardTitle>
+              <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">
+                {task.comments.length} update{task.comments.length === 1 ? "" : "s"}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {task.comments.length > 0 ? (
+                task.comments.map((comment) => (
+                  <div className="rounded-2xl border border-zinc-200 bg-white/90 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40" key={comment.id}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                          {comment.author.user.fullName ?? comment.author.user.email}
+                        </p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {formatTaskUpdateTimestamp(comment.createdAt, comment.updatedAt)}
+                        </p>
+                      </div>
+                      {comment.authorMembershipId === membership.id ? (
+                        <TaskCommentActionsMenu commentBody={comment.body} commentId={comment.id} />
+                      ) : null}
+                    </div>
+                    <TaskUpdateBody body={comment.body} className="mt-3" />
+                    {comment.attachments.some((attachment) => isImageAttachment(attachment)) ? (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        {comment.attachments.filter(isImageAttachment).map((attachment) => (
+                          <a
+                            className="group overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 transition hover:border-sky-200 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-sky-500/30"
+                            href={ensureAppPath(attachment.filePath)}
+                            key={attachment.id}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            <Image
+                              alt={attachment.fileName}
+                              className="h-52 w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                              height={720}
+                              loading="lazy"
+                              src={resolveAppAssetUrl(attachment.filePath) ?? ensureAppPath(attachment.filePath)}
+                              unoptimized
+                              width={1200}
+                            />
+                            <div className="border-t border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-300">
+                              {attachment.fileName}
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                    {comment.attachments.some((attachment) => !isImageAttachment(attachment)) ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {comment.attachments.filter((attachment) => !isImageAttachment(attachment)).map((attachment) => (
+                          <a
+                            className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-sky-200 hover:text-sky-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-sky-500/30 dark:hover:text-sky-300"
+                            href={ensureAppPath(attachment.filePath)}
+                            key={attachment.id}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {attachment.fileName}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">No updates yet.</p>
+              )}
+            </div>
+
+            <Separator />
+            <CommentForm taskId={task.id} />
           </div>
         </CardContent>
       </Card>

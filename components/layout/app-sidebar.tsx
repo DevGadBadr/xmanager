@@ -54,7 +54,7 @@ export function AppSidebar({
     : projectIdFromReturnTo;
   const isProjectsContext = isProjectsRoute || Boolean(projectIdFromReturnTo);
   const isMobile = mode === "mobile";
-  const [projectsExpanded, setProjectsExpanded] = useState(isProjectsContext);
+  const [projectsExpanded, setProjectsExpanded] = useState(true);
 
   return (
     <aside
@@ -91,35 +91,63 @@ export function AppSidebar({
 
           return (
             <div key={item.href} className={cn("space-y-2", isProjectsItem && projectsExpanded && "space-y-0.5")}>
-              <PendingLink
-                busyMessage={`Opening ${item.label.toLowerCase()}...`}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14.3px] font-medium transition leading-tight",
-                  active
-                    ? "bg-sky-600 text-white shadow-sm"
-                    : "text-zinc-600 hover:bg-white hover:text-zinc-950 hover:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-50",
-                )}
-                href={item.href}
-                onClick={(event) => {
-                  if (!isProjectsItem) {
-                    onNavigate?.();
-                    return;
-                  }
+              {isProjectsItem ? (
+                <div className="relative">
+                  <PendingLink
+                    busyMessage={`Opening ${item.label.toLowerCase()}...`}
+                    className={cn(
+                      "flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2 pr-11 text-[14.3px] font-medium transition leading-tight",
+                      active
+                        ? "bg-sky-600 text-white shadow-sm"
+                        : "text-zinc-600 hover:bg-white hover:text-zinc-950 hover:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-50",
+                    )}
+                    href={item.href}
+                    onClick={() => {
+                      onNavigate?.();
+                    }}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </PendingLink>
 
-                  if (isProjectsRoute) {
-                    event.preventDefault();
-                    setProjectsExpanded((current) => !current);
+                  <button
+                    aria-label={projectsExpanded ? "Hide project list" : "Show project list"}
+                    className={cn(
+                      "absolute inset-y-1 right-1 inline-flex w-7 items-center justify-center rounded-md text-zinc-400 transition",
+                      active
+                        ? "text-white/80 hover:bg-white/12 hover:text-white"
+                        : "hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
+                    )}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setProjectsExpanded((current) => !current);
+                    }}
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="block text-base leading-none">
+                      &middot;&middot;&middot;
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <PendingLink
+                  busyMessage={`Opening ${item.label.toLowerCase()}...`}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14.3px] font-medium transition leading-tight",
+                    active
+                      ? "bg-sky-600 text-white shadow-sm"
+                      : "text-zinc-600 hover:bg-white hover:text-zinc-950 hover:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-50",
+                  )}
+                  href={item.href}
+                  onClick={() => {
                     onNavigate?.();
-                    return;
-                  }
-
-                  setProjectsExpanded(true);
-                  onNavigate?.();
-                }}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {item.label}
-              </PendingLink>
+                  }}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </PendingLink>
+              )}
 
               {isProjectsItem && projectsExpanded ? (
                 <div className="ml-4 border-l border-zinc-200 pl-2 dark:border-zinc-800">
