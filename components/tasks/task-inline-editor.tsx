@@ -67,11 +67,13 @@ export function TaskInlineEditor({
   memberships,
   projectName,
   task,
+  variant = "default",
 }: {
   canManageTasks: boolean;
   memberships: MembershipOption[];
   projectName: string;
   task: EditableTask;
+  variant?: "default" | "sidebar";
 }) {
   const [state, formAction, pending] = useActionState(updateTaskAction, initialActionState);
   const [activeEditor, setActiveEditor] = useState<ActiveEditor>(null);
@@ -196,116 +198,233 @@ export function TaskInlineEditor({
 
   return (
     <>
-      <div className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-950/40 md:grid-cols-2 xl:grid-cols-4">
-        <TaskField
-          label="Status"
-          trigger={
-            canManageTasks ? (
-              <InlineTrigger
-                onClick={(event) => openEditor("status", event.currentTarget)}
-                open={activeEditor === "status"}
-              >
-                <StatusBadge status={task.status} />
-              </InlineTrigger>
-            ) : (
-              <StatusBadge status={task.status} />
-            )
-          }
-        />
-
-        <TaskField
-          label="Priority"
-          trigger={
-            canManageTasks ? (
-              <InlineTrigger
-                onClick={(event) => openEditor("priority", event.currentTarget)}
-                open={activeEditor === "priority"}
-              >
-                <PriorityBadge priority={task.priority} />
-              </InlineTrigger>
-            ) : (
-              <PriorityBadge priority={task.priority} />
-            )
-          }
-        />
-
-        <TaskField
-          label="Start date"
-          trigger={
-            canManageTasks ? (
-              <InlineTrigger
-                onClick={(event) => openEditor("startDate", event.currentTarget)}
-                open={activeEditor === "startDate"}
-              >
-                <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-                {formatDate(task.startDate)}
-              </InlineTrigger>
-            ) : (
-              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.startDate)}</span>
-            )
-          }
-        />
-
-        <TaskField
-          label="Due date"
-          trigger={
-            canManageTasks ? (
-              <InlineTrigger
-                onClick={(event) => openEditor("dueDate", event.currentTarget)}
-                open={activeEditor === "dueDate"}
-              >
-                <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-                {formatDate(task.dueDate)}
-              </InlineTrigger>
-            ) : (
-              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.dueDate)}</span>
-            )
-          }
-        />
-      </div>
-
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        <TaskMetaItem label="Project">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{projectName}</p>
-        </TaskMetaItem>
-
-        <TaskMetaItem label="Assignees">
-          <div className="flex flex-wrap items-center gap-2">
-            {canManageTasks ? (
-              <>
+      {variant === "sidebar" ? (
+        <div className="space-y-3">
+          <SidebarMetaRow
+            label="Status"
+            value={
+              canManageTasks ? (
                 <InlineTrigger
-                  onClick={(event) => openEditor("assignee", event.currentTarget)}
-                  open={activeEditor === "assignee"}
+                  onClick={(event) => openEditor("status", event.currentTarget)}
+                  open={activeEditor === "status"}
                 >
-                  {selectedAssignees.length > 0 ? (
-                    <TaskAssigneeSummary assignees={selectedAssignees} />
-                  ) : (
-                    <>
-                      <UserPlus className="h-3.5 w-3.5 text-zinc-400" />
-                      <span>Unassigned</span>
-                    </>
-                  )}
+                  <StatusBadge status={task.status} />
                 </InlineTrigger>
-                <Button
-                  aria-label="Assign task"
-                  onClick={(event) => openEditor("assignee", event.currentTarget)}
-                  size="icon"
-                  type="button"
-                  variant="outline"
+              ) : (
+                <StatusBadge status={task.status} />
+              )
+            }
+          />
+
+          <SidebarMetaRow
+            label="Priority"
+            value={
+              canManageTasks ? (
+                <InlineTrigger
+                  onClick={(event) => openEditor("priority", event.currentTarget)}
+                  open={activeEditor === "priority"}
                 >
-                  <CirclePlus className="h-4 w-4" />
-                </Button>
-              </>
-            ) : selectedAssignees.length > 0 ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-900">
-                <TaskAssigneeSummary assignees={selectedAssignees} />
+                  <PriorityBadge priority={task.priority} />
+                </InlineTrigger>
+              ) : (
+                <PriorityBadge priority={task.priority} />
+              )
+            }
+          />
+
+          <SidebarMetaRow
+            label="Start"
+            value={
+              canManageTasks ? (
+                <InlineTrigger
+                  onClick={(event) => openEditor("startDate", event.currentTarget)}
+                  open={activeEditor === "startDate"}
+                >
+                  <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                  {formatDate(task.startDate)}
+                </InlineTrigger>
+              ) : (
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.startDate)}</span>
+              )
+            }
+          />
+
+          <SidebarMetaRow
+            label="Due"
+            value={
+              canManageTasks ? (
+                <InlineTrigger
+                  onClick={(event) => openEditor("dueDate", event.currentTarget)}
+                  open={activeEditor === "dueDate"}
+                >
+                  <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                  {formatDate(task.dueDate)}
+                </InlineTrigger>
+              ) : (
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.dueDate)}</span>
+              )
+            }
+          />
+
+          <SidebarMetaRow
+            label="Project"
+            value={<p className="text-sm text-zinc-600 dark:text-zinc-400">{projectName}</p>}
+          />
+
+          <SidebarMetaRow
+            label="Assignees"
+            value={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {canManageTasks ? (
+                  <>
+                    <InlineTrigger
+                      onClick={(event) => openEditor("assignee", event.currentTarget)}
+                      open={activeEditor === "assignee"}
+                    >
+                      {selectedAssignees.length > 0 ? (
+                        <TaskAssigneeSummary assignees={selectedAssignees} />
+                      ) : (
+                        <>
+                          <UserPlus className="h-3.5 w-3.5 text-zinc-400" />
+                          <span>Unassigned</span>
+                        </>
+                      )}
+                    </InlineTrigger>
+                    <Button
+                      aria-label="Assign task"
+                      onClick={(event) => openEditor("assignee", event.currentTarget)}
+                      size="icon"
+                      type="button"
+                      variant="outline"
+                    >
+                      <CirclePlus className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : selectedAssignees.length > 0 ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-900">
+                    <TaskAssigneeSummary assignees={selectedAssignees} />
+                  </div>
+                ) : (
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">Unassigned</span>
+                )}
               </div>
-            ) : (
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">Unassigned</span>
-            )}
+            }
+          />
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-950/40 md:grid-cols-2 xl:grid-cols-4">
+            <TaskField
+              label="Status"
+              trigger={
+                canManageTasks ? (
+                  <InlineTrigger
+                    onClick={(event) => openEditor("status", event.currentTarget)}
+                    open={activeEditor === "status"}
+                  >
+                    <StatusBadge status={task.status} />
+                  </InlineTrigger>
+                ) : (
+                  <StatusBadge status={task.status} />
+                )
+              }
+            />
+
+            <TaskField
+              label="Priority"
+              trigger={
+                canManageTasks ? (
+                  <InlineTrigger
+                    onClick={(event) => openEditor("priority", event.currentTarget)}
+                    open={activeEditor === "priority"}
+                  >
+                    <PriorityBadge priority={task.priority} />
+                  </InlineTrigger>
+                ) : (
+                  <PriorityBadge priority={task.priority} />
+                )
+              }
+            />
+
+            <TaskField
+              label="Start date"
+              trigger={
+                canManageTasks ? (
+                  <InlineTrigger
+                    onClick={(event) => openEditor("startDate", event.currentTarget)}
+                    open={activeEditor === "startDate"}
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                    {formatDate(task.startDate)}
+                  </InlineTrigger>
+                ) : (
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.startDate)}</span>
+                )
+              }
+            />
+
+            <TaskField
+              label="Due date"
+              trigger={
+                canManageTasks ? (
+                  <InlineTrigger
+                    onClick={(event) => openEditor("dueDate", event.currentTarget)}
+                    open={activeEditor === "dueDate"}
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                    {formatDate(task.dueDate)}
+                  </InlineTrigger>
+                ) : (
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(task.dueDate)}</span>
+                )
+              }
+            />
           </div>
-        </TaskMetaItem>
-      </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <TaskMetaItem label="Project">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">{projectName}</p>
+            </TaskMetaItem>
+
+            <TaskMetaItem label="Assignees">
+              <div className="flex flex-wrap items-center gap-2">
+                {canManageTasks ? (
+                  <>
+                    <InlineTrigger
+                      onClick={(event) => openEditor("assignee", event.currentTarget)}
+                      open={activeEditor === "assignee"}
+                    >
+                      {selectedAssignees.length > 0 ? (
+                        <TaskAssigneeSummary assignees={selectedAssignees} />
+                      ) : (
+                        <>
+                          <UserPlus className="h-3.5 w-3.5 text-zinc-400" />
+                          <span>Unassigned</span>
+                        </>
+                      )}
+                    </InlineTrigger>
+                    <Button
+                      aria-label="Assign task"
+                      onClick={(event) => openEditor("assignee", event.currentTarget)}
+                      size="icon"
+                      type="button"
+                      variant="outline"
+                    >
+                      <CirclePlus className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : selectedAssignees.length > 0 ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-900">
+                    <TaskAssigneeSummary assignees={selectedAssignees} />
+                  </div>
+                ) : (
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">Unassigned</span>
+                )}
+              </div>
+            </TaskMetaItem>
+          </div>
+        </>
+      )}
 
       <FloatingEditorShell panelRef={panelRef} position={position}>
         {activeEditor === "status" ? (
@@ -432,6 +551,21 @@ export function TaskInlineEditor({
         ) : null}
       </FloatingEditorShell>
     </>
+  );
+}
+
+function SidebarMetaRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-zinc-200/80 pb-3 last:border-b-0 last:pb-0 dark:border-zinc-800/80">
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
+      <div className="min-w-0 max-w-[70%] text-right">{value}</div>
+    </div>
   );
 }
 

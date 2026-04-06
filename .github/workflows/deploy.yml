@@ -14,7 +14,7 @@ jobs:
                     VALUE=$(cat .deploy | tr -d '[:space:]')
                     echo "deploy=$VALUE" >> $GITHUB_OUTPUT
 
-            -   name: Deploy to VPs via SSH
+            -   name: Deploy to VPS via SSH
                 if: steps.flag.outputs.deploy == 'true'
                 uses: appleboy/ssh-action@v1.0.3
                 with:

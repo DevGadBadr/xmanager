@@ -22,6 +22,7 @@ export async function listTeams(workspaceId: string) {
 
 export async function createTeam(input: {
   workspaceId: string;
+  creatorMembershipId: string;
   actorUserId: string;
   name: string;
   description?: string;
@@ -30,6 +31,7 @@ export async function createTeam(input: {
   const team = await db.team.create({
     data: {
       workspaceId: input.workspaceId,
+      creatorMembershipId: input.creatorMembershipId,
       name: input.name,
       description: input.description || null,
       managerMembershipId: input.managerMembershipId || null,
@@ -44,6 +46,63 @@ export async function createTeam(input: {
       entityId: team.id,
       action: "CREATED",
       message: `Created team ${team.name}`,
+    },
+  });
+
+  return team;
+}
+
+export async function getTeamEditContext(teamId: string, workspaceId: string) {
+  return db.team.findFirstOrThrow({
+    where: {
+      id: teamId,
+      workspaceId,
+      isArchived: false,
+    },
+    select: {
+      id: true,
+      creatorMembershipId: true,
+      name: true,
+    },
+  });
+}
+
+export async function updateTeamContent(input: {
+  workspaceId: string;
+  teamId: string;
+  actorUserId: string;
+  name: string;
+  description?: string;
+}) {
+  await db.team.findFirstOrThrow({
+    where: {
+      id: input.teamId,
+      workspaceId: input.workspaceId,
+      isArchived: false,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const team = await db.team.update({
+    where: {
+      id: input.teamId,
+    },
+    data: {
+      name: input.name,
+      description: input.description || null,
+    },
+  });
+
+  await db.activityLog.create({
+    data: {
+      workspaceId: input.workspaceId,
+      actorUserId: input.actorUserId,
+      entityType: "TEAM",
+      entityId: team.id,
+      action: "UPDATED",
+      message: `Updated team ${team.name}`,
     },
   });
 
@@ -83,4 +142,6 @@ export async function deleteTeam(input: {
       message: `Deleted team ${team.name}`,
     },
   });
+
+  return team;
 }

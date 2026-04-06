@@ -152,6 +152,7 @@ model Membership {
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamLinks        TeamMember[]
   managedTeams     Team[]           @relation("TeamManager")
+  createdTeams     Team[]           @relation("TeamCreator")
   invitedRecords   Invitation[]     @relation("InvitedByMembership")
   acceptedInvites  Invitation[]     @relation("AcceptedByMembership")
   ownedProjects    Project[]        @relation("ProjectOwner")
@@ -171,17 +172,20 @@ model Team {
   workspaceId         String
   name                String
   description         String?
+  creatorMembershipId String
   managerMembershipId String?
   isArchived          Boolean      @default(false)
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   workspace           Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator             Membership   @relation("TeamCreator", fields: [creatorMembershipId], references: [id], onDelete: Restrict)
   manager             Membership?  @relation("TeamManager", fields: [managerMembershipId], references: [id], onDelete: SetNull)
   members             TeamMember[]
   invitations         Invitation[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
+  @@index([creatorMembershipId])
   @@index([managerMembershipId])
 }
 

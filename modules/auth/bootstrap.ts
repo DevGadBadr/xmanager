@@ -183,6 +183,7 @@ export async function bootstrapPrimaryOwner(user: {
         },
       },
       update: {
+        creatorMembershipId: membership.id,
         managerMembershipId: membership.id,
         isArchived: false,
       },
@@ -190,6 +191,7 @@ export async function bootstrapPrimaryOwner(user: {
         workspaceId: workspace.id,
         name: DEFAULT_TEAM_NAME,
         description: "Default seeded team for initial delivery work.",
+        creatorMembershipId: membership.id,
         managerMembershipId: membership.id,
       },
     });
