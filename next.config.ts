@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   basePath: APP_BASE_PATH || undefined,
   allowedDevOrigins: IS_DEVELOPMENT_APP ? ["devgadbadr.com"] : undefined,
   turbopack: {
-    root: __dirname,
+    root: import.meta.dirname,
   },
 };
 

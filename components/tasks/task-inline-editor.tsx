@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TASK_STATUS_OPTIONS, type TaskStatusValue } from "@/lib/task-status";
 
 type EditableTask = {
   id: string;
@@ -44,15 +45,11 @@ type TaskUpdateOverrides = {
   dueDate?: string;
   priority?: string;
   startDate?: string;
-  status?: string;
+  status?: TaskStatusValue;
 };
 
 const STATUS_OPTIONS = [
-  { value: "TODO", label: "To do" },
-  { value: "IN_PROGRESS", label: "In progress" },
-  { value: "IN_REVIEW", label: "In review" },
-  { value: "DONE", label: "Done" },
-  { value: "CANCELLED", label: "Cancelled" },
+  ...TASK_STATUS_OPTIONS,
 ] as const;
 
 const PRIORITY_OPTIONS = [
@@ -768,7 +765,11 @@ function FloatingDateEditor({
 
 function StatusBadge({ status }: { status: string }) {
   return (
-    <Badge variant={status === "DONE" ? "success" : status === "CANCELLED" ? "danger" : "default"}>
+    <Badge
+      variant={
+        status === "CLOSED" ? "success" : status === "HOLD" ? "warning" : status === "OPEN" ? "neutral" : "default"
+      }
+    >
       {formatLabel(status)}
     </Badge>
   );

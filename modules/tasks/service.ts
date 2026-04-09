@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from "@prisma/client";
+import type { TaskPriority, TaskStatus } from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
 import { getEnv } from "@/lib/env";
@@ -221,7 +221,10 @@ export async function updateTask(input: {
     assigneeMembershipIds.length !== existingAssigneeIds.length ||
     assigneeMembershipIds.some((membershipId) => !existingAssigneeIds.includes(membershipId));
   const addedAssigneeIds = assigneeMembershipIds.filter((membershipId) => !existingAssigneeIds.includes(membershipId));
-  const nextCompletedAt = input.status === "DONE" ? new Date() : null;
+  const nextCompletedAt =
+    input.status === "CLOSED"
+      ? existing.completedAt ?? new Date()
+      : null;
   const task = await db.task.update({
     where: {
       id: input.taskId,

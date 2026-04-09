@@ -2,7 +2,7 @@ import type {
   ActivityAction,
   ActivityEntityType,
   Prisma,
-} from "@prisma/client";
+} from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
 

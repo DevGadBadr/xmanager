@@ -1,0 +1,23 @@
+ALTER TYPE "TaskStatus" RENAME TO "TaskStatus_old";
+
+CREATE TYPE "TaskStatus" AS ENUM ('OPEN', 'IN_PROGRESS', 'CLOSED', 'HOLD');
+
+ALTER TABLE "Task"
+ALTER COLUMN "status" DROP DEFAULT;
+
+ALTER TABLE "Task"
+ALTER COLUMN "status" TYPE "TaskStatus"
+USING (
+  CASE "status"::text
+    WHEN 'TODO' THEN 'OPEN'
+    WHEN 'IN_PROGRESS' THEN 'IN_PROGRESS'
+    WHEN 'IN_REVIEW' THEN 'IN_PROGRESS'
+    WHEN 'DONE' THEN 'CLOSED'
+    WHEN 'CANCELLED' THEN 'HOLD'
+  END
+)::"TaskStatus";
+
+ALTER TABLE "Task"
+ALTER COLUMN "status" SET DEFAULT 'OPEN';
+
+DROP TYPE "TaskStatus_old";

@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -40,11 +40,10 @@ enum ProjectStatus {
 }
 
 enum TaskStatus {
-  TODO
+  OPEN
   IN_PROGRESS
-  IN_REVIEW
-  DONE
-  CANCELLED
+  CLOSED
+  HOLD
 }
 
 enum TaskPriority {
@@ -287,7 +286,7 @@ model Task {
   projectId           String
   title               String
   description         String?
-  status              TaskStatus      @default(TODO)
+  status              TaskStatus      @default(OPEN)
   priority            TaskPriority    @default(MEDIUM)
   creatorMembershipId String
   reporterMembershipId String?

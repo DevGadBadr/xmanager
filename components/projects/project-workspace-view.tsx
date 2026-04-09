@@ -11,12 +11,13 @@ import { ProjectContentEditor } from "@/components/projects/project-content-edit
 import { ProjectTaskTable } from "@/components/projects/task-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PendingLink } from "@/components/shared/pending-link";
-import { TaskAssigneeGroup, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
+import { TaskAssigneeSummary, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { TASK_STATUS_OPTIONS, formatTaskStatus, isOpenTaskStatus, normalizeTaskStatus } from "@/lib/task-status";
 import { cn, formatDate } from "@/lib/utils";
 
 type AssigneeOption = {
@@ -36,21 +37,13 @@ type TaskRow = {
 };
 
 type StoredProjectFilters = {
-  activeQuickFilter: QuickFilter;
+  assigneeId: string | null;
   search: string;
+  status: string | null;
   viewMode: ViewMode;
 };
 
-type QuickFilter =
-  | {
-      type: "assignee";
-      value: string;
-    }
-  | {
-      type: "status";
-      value: string;
-    }
-  | null;
+type ActiveFilters = Pick<StoredProjectFilters, "assigneeId" | "status">;
 
 type ViewMode = "list" | "board";
 
@@ -70,30 +63,31 @@ type ProjectOption = {
 const PROJECT_FILTER_STORAGE_KEY = "xmanager:project-filters";
 const PROJECT_FILTERS_STORAGE_EVENT = "xmanager:project-filters-changed";
 const DEFAULT_PROJECT_FILTERS: StoredProjectFilters = {
-  activeQuickFilter: null,
+  assigneeId: null,
   search: "",
+  status: null,
   viewMode: "list",
 };
 const BOARD_COLUMNS: BoardColumn[] = [
   {
     id: "open",
     title: "Open",
-    statuses: ["TODO"],
+    statuses: ["OPEN"],
   },
   {
     id: "in-progress",
     title: "In progress",
-    statuses: ["IN_PROGRESS", "IN_REVIEW"],
+    statuses: ["IN_PROGRESS"],
   },
   {
     id: "closed",
     title: "Closed",
-    statuses: ["DONE"],
+    statuses: ["CLOSED"],
   },
   {
     id: "hold",
     title: "Hold",
-    statuses: ["CANCELLED"],
+    statuses: ["HOLD"],
   },
 ];
 
@@ -124,9 +118,10 @@ export function ProjectWorkspaceView({
   const [storedFilters, setStoredFilters] = useState<StoredProjectFilters>(DEFAULT_PROJECT_FILTERS);
   const [expandedSearchProjectId, setExpandedSearchProjectId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const assigneeId = storedFilters.assigneeId;
   const search = storedFilters.search;
+  const status = storedFilters.status;
   const viewMode = storedFilters.viewMode;
-  const activeQuickFilter = storedFilters.activeQuickFilter;
   const deferredSearch = useDeferredValue(search);
   const isSearchOpen = Boolean(search) || expandedSearchProjectId === selectedProjectId;
 
@@ -168,14 +163,13 @@ export function ProjectWorkspaceView({
     const normalizedSearch = deferredSearch.trim().toLocaleLowerCase();
 
     return tasks.filter((task) => {
-      if (
-        activeQuickFilter?.type === "assignee" &&
-        !task.assignees.some((assignee) => assignee.membershipId === activeQuickFilter.value)
-      ) {
+      if (assigneeId && !task.assignees.some((assignee) => assignee.membershipId === assigneeId)) {
         return false;
       }
 
-      if (activeQuickFilter?.type === "status" && task.status !== activeQuickFilter.value) {
+      const normalizedTaskStatus = normalizeTaskStatus(task.status);
+
+      if (status && normalizedTaskStatus !== status) {
         return false;
       }
 
@@ -185,41 +179,31 @@ export function ProjectWorkspaceView({
 
       return [task.title, task.description ?? ""].some((value) => value.toLocaleLowerCase().includes(normalizedSearch));
     });
-  }, [activeQuickFilter, deferredSearch, tasks]);
-
-  const activeFilterLabel = useMemo(() => {
-    if (!activeQuickFilter) {
-      return null;
-    }
-
-    if (activeQuickFilter.type === "assignee") {
-      return `Assignee: ${assigneeLabelById.get(activeQuickFilter.value) ?? "Unknown"}`;
-    }
-
-    return `Status: ${formatTaskStatus(activeQuickFilter.value)}`;
-  }, [activeQuickFilter, assigneeLabelById]);
+  }, [assigneeId, deferredSearch, status, tasks]);
 
   const boardColumns = useMemo(
     () =>
       BOARD_COLUMNS.map((column) => ({
         ...column,
-        tasks: visibleTasks.filter((task) => column.statuses.includes(task.status)),
+        tasks: visibleTasks.filter((task) => {
+          const normalizedTaskStatus = normalizeTaskStatus(task.status);
+
+          return normalizedTaskStatus ? column.statuses.includes(normalizedTaskStatus) : column.statuses.includes(task.status);
+        }),
       })),
     [visibleTasks],
   );
 
   const openTaskCount = useMemo(
-    () => tasks.filter((task) => task.status !== "DONE" && task.status !== "CANCELLED").length,
+    () => tasks.filter((task) => isOpenTaskStatus(task.status)).length,
     [tasks],
   );
 
   const toggleAssigneeFilter = (membershipId: string) => {
     setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
       ...current,
-      activeQuickFilter:
-        current.activeQuickFilter?.type === "assignee" && current.activeQuickFilter.value === membershipId
-          ? null
-          : { type: "assignee", value: membershipId },
+      status: null,
+      assigneeId: current.assigneeId === membershipId ? null : membershipId,
     }));
   };
 
@@ -250,19 +234,36 @@ export function ProjectWorkspaceView({
   const clearQuickFilter = () => {
     setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
       ...current,
-      activeQuickFilter: null,
+      assigneeId: null,
+      status: null,
     }));
   };
 
   const toggleStatusFilter = (status: string) => {
     setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
       ...current,
-      activeQuickFilter:
-        current.activeQuickFilter?.type === "status" && current.activeQuickFilter.value === status
-          ? null
-          : { type: "status", value: status },
+      assigneeId: null,
+      status: current.status === status ? null : status,
     }));
   };
+
+  const activeFilterChips = assigneeId
+    ? [
+        {
+          key: `assignee:${assigneeId}`,
+          label: `Assignee: ${assigneeLabelById.get(assigneeId) ?? "Unknown"}`,
+          onRemove: () => toggleAssigneeFilter(assigneeId),
+        },
+      ]
+    : status
+      ? [
+          {
+            key: `status:${status}`,
+            label: `Status: ${formatTaskStatus(status)}`,
+            onRemove: () => toggleStatusFilter(status),
+          },
+        ]
+      : [];
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-3 xl:grid xl:min-h-0 xl:grid-rows-[auto_minmax(0,1fr)]">
@@ -410,41 +411,102 @@ export function ProjectWorkspaceView({
           </div>
         </div>
 
-        {activeFilterLabel ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-            <div className="flex min-h-8 items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
-                Quick filter
-              </span>
-              <Badge className="px-2.5 py-1 text-[10px]" variant="default">
-                {activeFilterLabel}
-              </Badge>
-            </div>
+        <div className="mt-3 space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <ProjectFilterSection label="Assignees">
+            {assignees.map((assignee) => {
+              const selected = assigneeId === assignee.id;
 
-            <Button className="h-8 px-2.5 text-xs" onClick={clearQuickFilter} type="button" variant="ghost">
-              Clear
-            </Button>
-          </div>
-        ) : null}
+              return (
+                <button
+                  aria-pressed={selected}
+                  className="appearance-none rounded-full border-0"
+                  key={assignee.id}
+                  onClick={() => toggleAssigneeFilter(assignee.id)}
+                  type="button"
+                >
+                  <Badge
+                    className={cn(
+                      "px-2.5 py-1 text-[10px] transition",
+                      !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+                    )}
+                    variant={selected ? "default" : "neutral"}
+                  >
+                    {assignee.label}
+                  </Badge>
+                </button>
+              );
+            })}
+          </ProjectFilterSection>
+
+          <ProjectFilterSection label="Status">
+            {TASK_STATUS_OPTIONS.map((option) => {
+              const selected = status === option.value;
+
+              return (
+                <button
+                  aria-pressed={selected}
+                  className="appearance-none rounded-full border-0"
+                  key={option.value}
+                  onClick={() => toggleStatusFilter(option.value)}
+                  type="button"
+                >
+                  <Badge
+                    className={cn(
+                      "px-2.5 py-1 text-[10px] transition",
+                      !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+                    )}
+                    variant={selected ? "default" : "neutral"}
+                  >
+                    {option.label}
+                  </Badge>
+                </button>
+              );
+            })}
+          </ProjectFilterSection>
+
+          {activeFilterChips.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-h-8 items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                  Active
+                </span>
+                {activeFilterChips.map((chip) => (
+                  <button
+                    className="appearance-none rounded-full border-0"
+                    key={chip.key}
+                    onClick={chip.onRemove}
+                    type="button"
+                  >
+                    <Badge className="px-2.5 py-1 text-[10px]" variant="default">
+                      {chip.label}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+
+              <Button className="h-8 px-2.5 text-xs" onClick={clearQuickFilter} type="button" variant="ghost">
+                Clear
+              </Button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {visibleTasks.length > 0 ? (
         viewMode === "board" ? (
           <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden xl:h-full">
             <ProjectTaskBoard
-              activeQuickFilter={activeQuickFilter}
+              activeFilters={{ assigneeId, status }}
               canManageTasks={canManageTasks}
               columns={boardColumns}
-              onAssigneeClick={toggleAssigneeFilter}
               onStatusClick={toggleStatusFilter}
               returnTo={pathname}
             />
           </div>
         ) : (
           <ProjectTaskTable
-            activeQuickFilter={activeQuickFilter}
+            activeFilters={{ assigneeId, status }}
             canManageTasks={canManageTasks}
-            onAssigneeClick={toggleAssigneeFilter}
             onStatusClick={toggleStatusFilter}
             returnTo={pathname}
             tasks={visibleTasks}
@@ -468,7 +530,17 @@ function readStoredProjectFilters(projectId: string, rawValue: string | null) {
   try {
     const parsed = JSON.parse(rawValue) as Record<
       string,
-      StoredProjectFilters | { assigneeId?: string; search?: string; viewMode?: ViewMode }
+      | StoredProjectFilters
+      | {
+          activeQuickFilter?: {
+            type: "assignee" | "status";
+            value: string;
+          } | null;
+          assigneeId?: string | null;
+          search?: string;
+          status?: string | null;
+          viewMode?: ViewMode;
+        }
     >;
     const filters = parsed[projectId];
 
@@ -476,15 +548,24 @@ function readStoredProjectFilters(projectId: string, rawValue: string | null) {
       return null;
     }
 
-    if ("activeQuickFilter" in filters) {
-      return filters;
-    }
+    const legacyQuickFilter = "activeQuickFilter" in filters ? filters.activeQuickFilter : undefined;
+    const nextStatus =
+      filters.status !== undefined
+        ? normalizeTaskStatus(filters.status)
+        : legacyQuickFilter?.type === "status"
+          ? normalizeTaskStatus(legacyQuickFilter.value)
+          : null;
+    const nextAssigneeId =
+      filters.assigneeId ??
+      (legacyQuickFilter?.type === "assignee" ? legacyQuickFilter.value : null) ??
+      null;
 
     return {
-      activeQuickFilter: filters.assigneeId ? ({ type: "assignee", value: filters.assigneeId } as const) : null,
+      assigneeId: nextAssigneeId,
       search: filters.search ?? "",
+      status: nextAssigneeId ? null : nextStatus,
       viewMode: filters.viewMode ?? "list",
-    };
+    } satisfies StoredProjectFilters;
   } catch {
     return null;
   }
@@ -542,22 +623,16 @@ function readStoredProjectFiltersMap() {
   }
 }
 
-function formatTaskStatus(status: string) {
-  return status.replaceAll("_", " ");
-}
-
 function ProjectTaskBoard({
-  activeQuickFilter,
+  activeFilters,
   canManageTasks,
   columns,
-  onAssigneeClick,
   onStatusClick,
   returnTo,
 }: {
-  activeQuickFilter: QuickFilter;
+  activeFilters: ActiveFilters;
   canManageTasks: boolean;
   columns: Array<BoardColumn & { tasks: TaskRow[] }>;
-  onAssigneeClick: (membershipId: string) => void;
   onStatusClick: (status: string) => void;
   returnTo: string;
 }) {
@@ -583,87 +658,16 @@ function ProjectTaskBoard({
           <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
             {column.tasks.length > 0 ? (
               column.tasks.map((task) => (
-                <div
-                  className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 text-left transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10"
+                <ProjectTaskBoardCard
+                  activeFilters={activeFilters}
+                  canManageTasks={canManageTasks}
                   key={task.id}
-                  onClick={() => {
-                    const href = `/tasks/${task.id}?returnTo=${encodeURIComponent(returnTo)}`;
-
-                    startNavigation(href, "Opening task...");
-                    router.push(href, {
-                      scroll: false,
-                    });
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter" && event.key !== " ") {
-                      return;
-                    }
-
-                    event.preventDefault();
-
-                    const href = `/tasks/${task.id}?returnTo=${encodeURIComponent(returnTo)}`;
-
-                    startNavigation(href, "Opening task...");
-                    router.push(href, {
-                      scroll: false,
-                    });
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="line-clamp-2 text-sm font-medium text-zinc-950 dark:text-zinc-50">{task.title}</p>
-                    <div className="flex items-start gap-2">
-                      <button
-                        aria-pressed={activeQuickFilter?.type === "status" && activeQuickFilter.value === task.status}
-                        className="appearance-none rounded-full border-0"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onStatusClick(task.status);
-                        }}
-                        type="button"
-                      >
-                        <Badge
-                          className={cn(
-                            "shrink-0 transition",
-                            activeQuickFilter?.type === "status" && activeQuickFilter.value === task.status
-                              ? ""
-                              : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-                          )}
-                          variant={activeQuickFilter?.type === "status" && activeQuickFilter.value === task.status ? "default" : "neutral"}
-                        >
-                          {formatTaskStatus(task.status)}
-                        </Badge>
-                      </button>
-                      {canManageTasks ? (
-                        <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                          <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {task.description ? (
-                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{task.description}</p>
-                  ) : null}
-
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                      <TaskAssigneeGroup
-                        activeMembershipId={activeQuickFilter?.type === "assignee" ? activeQuickFilter.value : null}
-                        assignees={task.assignees}
-                        onAssigneeClick={onAssigneeClick}
-                        triggerClassName={cn(
-                          activeQuickFilter?.type === "assignee" &&
-                            task.assignees.some((assignee) => assignee.membershipId === activeQuickFilter.value) &&
-                            "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-                        )}
-                      />
-                    </div>
-
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{formatDate(task.dueDate)}</span>
-                  </div>
-                </div>
+                  onStatusClick={onStatusClick}
+                  returnTo={returnTo}
+                  router={router}
+                  startNavigation={startNavigation}
+                  task={task}
+                />
               ))
             ) : (
               <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-zinc-200 px-3 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
@@ -673,6 +677,108 @@ function ProjectTaskBoard({
           </CardContent>
         </Card>
       ))}
+    </div>
+  );
+}
+
+function ProjectTaskBoardCard({
+  activeFilters,
+  canManageTasks,
+  onStatusClick,
+  returnTo,
+  router,
+  startNavigation,
+  task,
+}: {
+  activeFilters: ActiveFilters;
+  canManageTasks: boolean;
+  onStatusClick: (status: string) => void;
+  returnTo: string;
+  router: ReturnType<typeof useRouter>;
+  startNavigation: ReturnType<typeof useAppNavigation>["startNavigation"];
+  task: TaskRow;
+}) {
+  const normalizedStatus = normalizeTaskStatus(task.status) ?? task.status;
+
+  return (
+    <div
+      className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 text-left transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10"
+      onClick={() => {
+        const href = `/tasks/${task.id}?returnTo=${encodeURIComponent(returnTo)}`;
+
+        startNavigation(href, "Opening task...");
+        router.push(href, {
+          scroll: false,
+        });
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+
+        event.preventDefault();
+
+        const href = `/tasks/${task.id}?returnTo=${encodeURIComponent(returnTo)}`;
+
+        startNavigation(href, "Opening task...");
+        router.push(href, {
+          scroll: false,
+        });
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="line-clamp-2 text-sm font-medium text-zinc-950 dark:text-zinc-50">{task.title}</p>
+        <div className="flex items-start gap-2">
+          <button
+            aria-pressed={activeFilters.status === normalizedStatus}
+            className="appearance-none rounded-full border-0"
+            onClick={(event) => {
+              event.stopPropagation();
+              onStatusClick(normalizedStatus);
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            type="button"
+          >
+            <Badge
+              className={cn(
+                "shrink-0 transition",
+                activeFilters.status === normalizedStatus
+                  ? ""
+                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+              )}
+              variant={activeFilters.status === normalizedStatus ? "default" : "neutral"}
+            >
+              {formatTaskStatus(normalizedStatus)}
+            </Badge>
+          </button>
+          {canManageTasks ? (
+            <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+              <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {task.description ? (
+        <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{task.description}</p>
+      ) : null}
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div
+          className={cn(
+            "rounded-full px-1.5 py-1",
+            activeFilters.assigneeId &&
+              task.assignees.some((assignee) => assignee.membershipId === activeFilters.assigneeId) &&
+              "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+          )}
+        >
+          <TaskAssigneeSummary assignees={task.assignees} />
+        </div>
+
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">{formatDate(task.dueDate)}</span>
+      </div>
     </div>
   );
 }
@@ -688,6 +794,23 @@ function MetricChip({
     <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-950/60">
       <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{label}</p>
       <p className="max-w-[12rem] truncate text-xs font-medium text-zinc-950 dark:text-zinc-50">{value}</p>
+    </div>
+  );
+}
+
+function ProjectFilterSection({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-3">
+      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+        {label}
+      </span>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
     </div>
   );
 }

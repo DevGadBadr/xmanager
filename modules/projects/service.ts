@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { Prisma, type ProjectStatus } from "@prisma/client";
+import { Prisma, type ProjectStatus } from "@/generated/prisma/client";
 
 import { db } from "@/lib/db";
+import { isOpenTaskStatus } from "@/lib/task-status";
 
 export async function listProjects(workspaceId: string) {
   return db.project.findMany({
@@ -72,7 +73,7 @@ export async function listProjectExplorer(workspaceId: string) {
       status: project.status,
       ownerMembershipId: project.ownerMembershipId,
       taskCount: project.tasks.length,
-      openTaskCount: project.tasks.filter((task) => task.status !== "DONE" && task.status !== "CANCELLED").length,
+      openTaskCount: project.tasks.filter((task) => isOpenTaskStatus(task.status)).length,
       tasks: project.tasks.map((task) => ({
         id: task.id,
         name: task.title,

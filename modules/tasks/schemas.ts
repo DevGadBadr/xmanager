@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TASK_STATUSES } from "@/lib/task-status";
+
 export const taskSchema = z.object({
   projectId: z.string().cuid(),
   title: z.string().min(2).max(140),
@@ -12,7 +14,7 @@ export const taskSchema = z.object({
 
 export const taskUpdateSchema = z.object({
   taskId: z.string().cuid(),
-  status: z.enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"]),
+  status: z.enum(TASK_STATUSES),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
   assigneeMembershipIds: z.array(z.string().trim().min(1)).default([]),
   startDate: z.string().optional().or(z.literal("")),

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { TASK_OPEN_STATUSES } from "@/lib/task-status";
 
 import { listRecentActivity } from "@/modules/activity/service";
 
@@ -22,7 +23,7 @@ export async function getDashboardData(workspaceId: string, membershipId: string
           workspaceId,
           isArchived: false,
           status: {
-            in: ["TODO", "IN_PROGRESS", "IN_REVIEW"],
+            in: [...TASK_OPEN_STATUSES],
           },
         },
       }),
