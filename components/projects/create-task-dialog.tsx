@@ -14,7 +14,7 @@ export function CreateTaskDialog({
   projectId,
 }: {
   className?: string;
-  memberships: Array<{ id: string; user: { fullName: string | null; email: string } }>;
+  memberships: Array<{ id: string; user: { fullName: string | null; email: string; image: string | null } }>;
   projectId: string;
 }) {
   const [open, setOpen] = useState(false);

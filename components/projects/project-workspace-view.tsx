@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { LayoutGrid, Rows3, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -8,10 +8,11 @@ import { DeleteTaskButton } from "@/components/forms/delete-task-button";
 import { useAppNavigation } from "@/components/providers/app-navigation-provider";
 import { CreateTaskDialog } from "@/components/projects/create-task-dialog";
 import { ProjectContentEditor } from "@/components/projects/project-content-editor";
+import { ProjectTaskStatusControl } from "@/components/projects/task-status-control";
 import { ProjectTaskTable } from "@/components/projects/task-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PendingLink } from "@/components/shared/pending-link";
-import { TaskAssigneeSummary, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
+import { TaskAssigneeGroup, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,8 +61,6 @@ type ProjectOption = {
   status: string | null;
 };
 
-const PROJECT_FILTER_STORAGE_KEY = "xmanager:project-filters";
-const PROJECT_FILTERS_STORAGE_EVENT = "xmanager:project-filters-changed";
 const DEFAULT_PROJECT_FILTERS: StoredProjectFilters = {
   assigneeId: null,
   search: "",
@@ -96,7 +95,6 @@ export function ProjectWorkspaceView({
   canEditProjectContent,
   canManageTasks,
   memberships,
-  ownerLabel,
   projectDescription,
   projectName,
   projects,
@@ -106,8 +104,7 @@ export function ProjectWorkspaceView({
   assignees: AssigneeOption[];
   canEditProjectContent: boolean;
   canManageTasks: boolean;
-  memberships: Array<{ id: string; user: { fullName: string | null; email: string } }>;
-  ownerLabel: string;
+  memberships: Array<{ id: string; user: { fullName: string | null; email: string; image: string | null } }>;
   projectDescription: string | null;
   projectName: string;
   projects: ProjectOption[];
@@ -126,18 +123,8 @@ export function ProjectWorkspaceView({
   const isSearchOpen = Boolean(search) || expandedSearchProjectId === selectedProjectId;
 
   useEffect(() => {
-    const syncFromStorage = () => {
-      setStoredFilters(readStoredProjectFilters(selectedProjectId, readStoredProjectFiltersSnapshot()) ?? DEFAULT_PROJECT_FILTERS);
-    };
-
-    syncFromStorage();
-    window.addEventListener("storage", syncFromStorage);
-    window.addEventListener(PROJECT_FILTERS_STORAGE_EVENT, syncFromStorage);
-
-    return () => {
-      window.removeEventListener("storage", syncFromStorage);
-      window.removeEventListener(PROJECT_FILTERS_STORAGE_EVENT, syncFromStorage);
-    };
+    setStoredFilters(DEFAULT_PROJECT_FILTERS);
+    setExpandedSearchProjectId(null);
   }, [selectedProjectId]);
 
   useEffect(() => {
@@ -153,11 +140,6 @@ export function ProjectWorkspaceView({
       window.cancelAnimationFrame(frame);
     };
   }, [isSearchOpen]);
-
-  const assigneeLabelById = useMemo(
-    () => new Map(assignees.map((assignee) => [assignee.id, assignee.label])),
-    [assignees],
-  );
 
   const visibleTasks = useMemo(() => {
     const normalizedSearch = deferredSearch.trim().toLocaleLowerCase();
@@ -200,7 +182,7 @@ export function ProjectWorkspaceView({
   );
 
   const toggleAssigneeFilter = (membershipId: string) => {
-    setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
+    setStoredFilters((current) => ({
       ...current,
       status: null,
       assigneeId: current.assigneeId === membershipId ? null : membershipId,
@@ -208,7 +190,7 @@ export function ProjectWorkspaceView({
   };
 
   const setSearch = (value: string) => {
-    setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
+    setStoredFilters((current) => ({
       ...current,
       search: value,
     }));
@@ -225,45 +207,19 @@ export function ProjectWorkspaceView({
   };
 
   const setViewMode = (nextViewMode: ViewMode) => {
-    setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
+    setStoredFilters((current) => ({
       ...current,
       viewMode: nextViewMode,
     }));
   };
 
-  const clearQuickFilter = () => {
-    setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
-      ...current,
-      assigneeId: null,
-      status: null,
-    }));
-  };
-
   const toggleStatusFilter = (status: string) => {
-    setAndPersistStoredProjectFilters(selectedProjectId, setStoredFilters, (current) => ({
+    setStoredFilters((current) => ({
       ...current,
       assigneeId: null,
       status: current.status === status ? null : status,
     }));
   };
-
-  const activeFilterChips = assigneeId
-    ? [
-        {
-          key: `assignee:${assigneeId}`,
-          label: `Assignee: ${assigneeLabelById.get(assigneeId) ?? "Unknown"}`,
-          onRemove: () => toggleAssigneeFilter(assigneeId),
-        },
-      ]
-    : status
-      ? [
-          {
-            key: `status:${status}`,
-            label: `Status: ${formatTaskStatus(status)}`,
-            onRemove: () => toggleStatusFilter(status),
-          },
-        ]
-      : [];
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-3 xl:grid xl:min-h-0 xl:grid-rows-[auto_minmax(0,1fr)]">
@@ -368,7 +324,6 @@ export function ProjectWorkspaceView({
                     </div>
                     <MetricChip label="Open tasks" value={String(openTaskCount)} />
                     <MetricChip label="Members" value={String(assignees.length)} />
-                    <MetricChip label="Owner" value={ownerLabel} />
                     {canEditProjectContent ? (
                       <ProjectContentEditor
                         canEditContent
@@ -412,83 +367,64 @@ export function ProjectWorkspaceView({
         </div>
 
         <div className="mt-3 space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <ProjectFilterSection label="Assignees">
-            {assignees.map((assignee) => {
-              const selected = assigneeId === assignee.id;
+          <div className="flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-start xl:gap-6">
+            <div className="min-w-0">
+              <ProjectFilterSection label="Status">
+                {TASK_STATUS_OPTIONS.map((option) => {
+                  const selected = status === option.value;
 
-              return (
-                <button
-                  aria-pressed={selected}
-                  className="appearance-none rounded-full border-0"
-                  key={assignee.id}
-                  onClick={() => toggleAssigneeFilter(assignee.id)}
-                  type="button"
-                >
-                  <Badge
-                    className={cn(
-                      "px-2.5 py-1 text-[10px] transition",
-                      !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-                    )}
-                    variant={selected ? "default" : "neutral"}
-                  >
-                    {assignee.label}
-                  </Badge>
-                </button>
-              );
-            })}
-          </ProjectFilterSection>
-
-          <ProjectFilterSection label="Status">
-            {TASK_STATUS_OPTIONS.map((option) => {
-              const selected = status === option.value;
-
-              return (
-                <button
-                  aria-pressed={selected}
-                  className="appearance-none rounded-full border-0"
-                  key={option.value}
-                  onClick={() => toggleStatusFilter(option.value)}
-                  type="button"
-                >
-                  <Badge
-                    className={cn(
-                      "px-2.5 py-1 text-[10px] transition",
-                      !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-                    )}
-                    variant={selected ? "default" : "neutral"}
-                  >
-                    {option.label}
-                  </Badge>
-                </button>
-              );
-            })}
-          </ProjectFilterSection>
-
-          {activeFilterChips.length > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex min-h-8 items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
-                  Active
-                </span>
-                {activeFilterChips.map((chip) => (
-                  <button
-                    className="appearance-none rounded-full border-0"
-                    key={chip.key}
-                    onClick={chip.onRemove}
-                    type="button"
-                  >
-                    <Badge className="px-2.5 py-1 text-[10px]" variant="default">
-                      {chip.label}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-
-              <Button className="h-8 px-2.5 text-xs" onClick={clearQuickFilter} type="button" variant="ghost">
-                Clear
-              </Button>
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className="appearance-none rounded-full border-0"
+                      key={option.value}
+                      onClick={() => toggleStatusFilter(option.value)}
+                      type="button"
+                    >
+                      <Badge
+                        className={cn(
+                          "px-2.5 py-1 text-[10px] transition",
+                          !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+                        )}
+                        variant={selected ? "default" : "neutral"}
+                      >
+                        {option.label}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </ProjectFilterSection>
             </div>
-          ) : null}
+
+            <div className="min-w-0">
+              <ProjectFilterSection label="Assignees">
+                {assignees.map((assignee) => {
+                  const selected = assigneeId === assignee.id;
+
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className="appearance-none rounded-full border-0"
+                      key={assignee.id}
+                      onClick={() => toggleAssigneeFilter(assignee.id)}
+                      type="button"
+                    >
+                      <Badge
+                        className={cn(
+                          "px-2.5 py-1 text-[10px] transition",
+                          !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+                        )}
+                        variant={selected ? "default" : "neutral"}
+                      >
+                        {assignee.label}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </ProjectFilterSection>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -499,18 +435,18 @@ export function ProjectWorkspaceView({
               activeFilters={{ assigneeId, status }}
               canManageTasks={canManageTasks}
               columns={boardColumns}
-              onStatusClick={toggleStatusFilter}
+              onAssigneeClick={toggleAssigneeFilter}
               returnTo={pathname}
             />
           </div>
         ) : (
-          <ProjectTaskTable
-            activeFilters={{ assigneeId, status }}
-            canManageTasks={canManageTasks}
-            onStatusClick={toggleStatusFilter}
-            returnTo={pathname}
-            tasks={visibleTasks}
-          />
+            <ProjectTaskTable
+              activeFilters={{ assigneeId, status }}
+              canManageTasks={canManageTasks}
+              onAssigneeClick={toggleAssigneeFilter}
+              returnTo={pathname}
+              tasks={visibleTasks}
+            />
         )
       ) : (
         <EmptyState
@@ -522,118 +458,17 @@ export function ProjectWorkspaceView({
   );
 }
 
-function readStoredProjectFilters(projectId: string, rawValue: string | null) {
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue) as Record<
-      string,
-      | StoredProjectFilters
-      | {
-          activeQuickFilter?: {
-            type: "assignee" | "status";
-            value: string;
-          } | null;
-          assigneeId?: string | null;
-          search?: string;
-          status?: string | null;
-          viewMode?: ViewMode;
-        }
-    >;
-    const filters = parsed[projectId];
-
-    if (!filters) {
-      return null;
-    }
-
-    const legacyQuickFilter = "activeQuickFilter" in filters ? filters.activeQuickFilter : undefined;
-    const nextStatus =
-      filters.status !== undefined
-        ? normalizeTaskStatus(filters.status)
-        : legacyQuickFilter?.type === "status"
-          ? normalizeTaskStatus(legacyQuickFilter.value)
-          : null;
-    const nextAssigneeId =
-      filters.assigneeId ??
-      (legacyQuickFilter?.type === "assignee" ? legacyQuickFilter.value : null) ??
-      null;
-
-    return {
-      assigneeId: nextAssigneeId,
-      search: filters.search ?? "",
-      status: nextAssigneeId ? null : nextStatus,
-      viewMode: filters.viewMode ?? "list",
-    } satisfies StoredProjectFilters;
-  } catch {
-    return null;
-  }
-}
-
-function readStoredProjectFiltersSnapshot() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.sessionStorage.getItem(PROJECT_FILTER_STORAGE_KEY) ?? "";
-}
-
-function writeStoredProjectFilters(projectId: string, filters: StoredProjectFilters) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const nextValue = {
-    ...(readStoredProjectFiltersMap() ?? {}),
-    [projectId]: filters,
-  };
-
-  window.sessionStorage.setItem(PROJECT_FILTER_STORAGE_KEY, JSON.stringify(nextValue));
-  window.dispatchEvent(new Event(PROJECT_FILTERS_STORAGE_EVENT));
-}
-
-function setAndPersistStoredProjectFilters(
-  projectId: string,
-  setStoredFilters: Dispatch<SetStateAction<StoredProjectFilters>>,
-  update: (current: StoredProjectFilters) => StoredProjectFilters,
-) {
-  setStoredFilters((current) => {
-    const nextFilters = update(current);
-    writeStoredProjectFilters(projectId, nextFilters);
-    return nextFilters;
-  });
-}
-
-function readStoredProjectFiltersMap() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const rawValue = window.sessionStorage.getItem(PROJECT_FILTER_STORAGE_KEY);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawValue) as Record<string, StoredProjectFilters>;
-  } catch {
-    return null;
-  }
-}
-
 function ProjectTaskBoard({
   activeFilters,
   canManageTasks,
   columns,
-  onStatusClick,
+  onAssigneeClick,
   returnTo,
 }: {
   activeFilters: ActiveFilters;
   canManageTasks: boolean;
   columns: Array<BoardColumn & { tasks: TaskRow[] }>;
-  onStatusClick: (status: string) => void;
+  onAssigneeClick: (membershipId: string) => void;
   returnTo: string;
 }) {
   const router = useRouter();
@@ -662,7 +497,7 @@ function ProjectTaskBoard({
                   activeFilters={activeFilters}
                   canManageTasks={canManageTasks}
                   key={task.id}
-                  onStatusClick={onStatusClick}
+                  onAssigneeClick={onAssigneeClick}
                   returnTo={returnTo}
                   router={router}
                   startNavigation={startNavigation}
@@ -684,7 +519,7 @@ function ProjectTaskBoard({
 function ProjectTaskBoardCard({
   activeFilters,
   canManageTasks,
-  onStatusClick,
+  onAssigneeClick,
   returnTo,
   router,
   startNavigation,
@@ -692,14 +527,12 @@ function ProjectTaskBoardCard({
 }: {
   activeFilters: ActiveFilters;
   canManageTasks: boolean;
-  onStatusClick: (status: string) => void;
+  onAssigneeClick: (membershipId: string) => void;
   returnTo: string;
   router: ReturnType<typeof useRouter>;
   startNavigation: ReturnType<typeof useAppNavigation>["startNavigation"];
   task: TaskRow;
 }) {
-  const normalizedStatus = normalizeTaskStatus(task.status) ?? task.status;
-
   return (
     <div
       className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 text-left transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10"
@@ -731,28 +564,9 @@ function ProjectTaskBoardCard({
       <div className="flex items-start justify-between gap-3">
         <p className="line-clamp-2 text-sm font-medium text-zinc-950 dark:text-zinc-50">{task.title}</p>
         <div className="flex items-start gap-2">
-          <button
-            aria-pressed={activeFilters.status === normalizedStatus}
-            className="appearance-none rounded-full border-0"
-            onClick={(event) => {
-              event.stopPropagation();
-              onStatusClick(normalizedStatus);
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            type="button"
-          >
-            <Badge
-              className={cn(
-                "shrink-0 transition",
-                activeFilters.status === normalizedStatus
-                  ? ""
-                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-              )}
-              variant={activeFilters.status === normalizedStatus ? "default" : "neutral"}
-            >
-              {formatTaskStatus(normalizedStatus)}
-            </Badge>
-          </button>
+          <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+            <ProjectTaskStatusControl canManageTasks={canManageTasks} task={task} />
+          </div>
           {canManageTasks ? (
             <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
               <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
@@ -773,8 +587,15 @@ function ProjectTaskBoardCard({
               task.assignees.some((assignee) => assignee.membershipId === activeFilters.assigneeId) &&
               "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
           )}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
-          <TaskAssigneeSummary assignees={task.assignees} />
+          <TaskAssigneeGroup
+            activeMembershipId={activeFilters.assigneeId}
+            assignees={task.assignees}
+            onAssigneeClick={onAssigneeClick}
+          />
         </div>
 
         <span className="text-xs text-zinc-500 dark:text-zinc-400">{formatDate(task.dueDate)}</span>
@@ -806,11 +627,11 @@ function ProjectFilterSection({
   label: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-3">
-      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+    <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-3">
+      <span className="flex shrink-0 items-center justify-center text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400 xl:min-w-20 xl:self-stretch">
         {label}
       </span>
-      <div className="flex flex-wrap items-center gap-2">{children}</div>
+      <div className="flex flex-wrap items-center justify-center gap-2 xl:flex-1 xl:justify-start">{children}</div>
     </div>
   );
 }

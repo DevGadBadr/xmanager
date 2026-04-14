@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FileText, PencilLine } from "lucide-react";
+import { FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { initialActionState } from "@/lib/action-state";
@@ -141,11 +141,11 @@ export function ProjectContentEditor({
             type="button"
           >
             {trigger === "icon" ? (
-              <PencilLine className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             ) : (
               <>
                 <span className="truncate">{name}</span>
-                <PencilLine className="h-4 w-4 shrink-0 text-zinc-400" />
+                <Pencil className="h-4 w-4 shrink-0 text-zinc-400" />
               </>
             )}
           </button>

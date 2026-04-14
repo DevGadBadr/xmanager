@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { initialActionState } from "@/lib/action-state";
-import { cn } from "@/lib/utils";
+import { cn, resolveAppAssetUrl } from "@/lib/utils";
 import { createTaskAction } from "@/modules/tasks/actions";
 import { taskSchema } from "@/modules/tasks/schemas";
 import { TaskAssigneeSummary, getTaskAssigneeLabel, getTaskAssigneeInitials, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
@@ -19,9 +19,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type TaskValues = z.input<typeof taskSchema>;
+
+function getDefaultTaskDates() {
+  const startDate = new Date();
+  const dueDate = new Date(startDate);
+
+  dueDate.setDate(dueDate.getDate() + 1);
+
+  return {
+    startDate: formatDateInputValue(startDate),
+    dueDate: formatDateInputValue(dueDate),
+  };
+}
 
 export function TaskForm({
   projectId,
@@ -31,12 +43,13 @@ export function TaskForm({
   onSuccess,
 }: {
   projectId: string;
-  memberships: Array<{ id: string; user: { fullName: string | null; email: string } }>;
+  memberships: Array<{ id: string; user: { fullName: string | null; email: string; image: string | null } }>;
   className?: string;
   title?: string;
   onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createTaskAction, initialActionState);
+  const defaultTaskDates = useMemo(() => getDefaultTaskDates(), []);
   const form = useForm<TaskValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -45,8 +58,8 @@ export function TaskForm({
       description: "",
       priority: "MEDIUM",
       assigneeMembershipIds: [],
-      startDate: "",
-      dueDate: "",
+      startDate: defaultTaskDates.startDate,
+      dueDate: defaultTaskDates.dueDate,
     },
   });
   const watchedAssigneeIds = useWatch({
@@ -75,8 +88,8 @@ export function TaskForm({
         description: "",
         priority: "MEDIUM",
         assigneeMembershipIds: [],
-        startDate: "",
-        dueDate: "",
+        startDate: defaultTaskDates.startDate,
+        dueDate: defaultTaskDates.dueDate,
       });
       onSuccess?.();
     }
@@ -84,7 +97,7 @@ export function TaskForm({
     if (state.status === "error" && state.message) {
       toast.error(state.message);
     }
-  }, [form, onSuccess, projectId, state]);
+  }, [defaultTaskDates.dueDate, defaultTaskDates.startDate, form, onSuccess, projectId, state]);
 
   const toggleAssignee = (membershipId: string) => {
     const nextValue = selectedAssigneeIds.includes(membershipId)
@@ -178,6 +191,10 @@ export function TaskForm({
                           type="button"
                         >
                           <Avatar className="h-8 w-8">
+                            <AvatarImage
+                              alt={getTaskAssigneeLabel({ membershipId: membership.id, user: membership.user })}
+                              src={resolveAppAssetUrl(membership.user.image)}
+                            />
                             <AvatarFallback>{getTaskAssigneeInitials(getTaskAssigneeLabel({ membershipId: membership.id, user: membership.user }))}</AvatarFallback>
                           </Avatar>
                           <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -209,4 +226,12 @@ export function TaskForm({
       </CardContent>
     </Card>
   );
+}
+
+function formatDateInputValue(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }

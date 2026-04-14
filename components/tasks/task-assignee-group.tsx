@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, resolveAppAssetUrl } from "@/lib/utils";
 
 export type TaskAssigneeView = {
   membershipId: string;
   user: {
     fullName: string | null;
     email: string;
+    image?: string | null;
   };
 };
 
@@ -45,12 +46,13 @@ export function TaskAssigneeSummary({
     <div className={cn("flex min-w-0 items-center gap-2", className)}>
       <div className="flex items-center -space-x-2">
         {visibleAssignees.map((assignee) => (
-          <Avatar className={cn("h-7 w-7 ring-2 ring-white dark:ring-zinc-900", avatarClassName)} key={assignee.membershipId}>
+          <Avatar className={cn("h-7 w-7 border-2 border-white dark:border-zinc-900", avatarClassName)} key={assignee.membershipId}>
+            <AvatarImage alt={getTaskAssigneeLabel(assignee)} src={resolveAppAssetUrl(assignee.user.image)} />
             <AvatarFallback>{getTaskAssigneeInitials(getTaskAssigneeLabel(assignee))}</AvatarFallback>
           </Avatar>
         ))}
         {hiddenCount > 0 ? (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-[11px] font-semibold text-zinc-600 ring-2 ring-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-900">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-zinc-100 text-[11px] font-semibold text-zinc-600 dark:border-zinc-900 dark:bg-zinc-800 dark:text-zinc-300">
             +{hiddenCount}
           </span>
         ) : null}
@@ -119,6 +121,7 @@ export function TaskAssigneeGroup({
                 }}
               >
                 <Avatar className="h-8 w-8">
+                  <AvatarImage alt={label} src={resolveAppAssetUrl(assignee.user.image)} />
                   <AvatarFallback>{getTaskAssigneeInitials(label)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">

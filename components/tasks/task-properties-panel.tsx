@@ -10,6 +10,7 @@ type MembershipOption = {
   user: {
     fullName: string | null;
     email: string;
+    image: string | null;
   };
 };
 
@@ -22,6 +23,7 @@ type EditableTask = {
     user: {
       fullName: string | null;
       email: string;
+      image: string | null;
     };
   }>;
   startDate?: Date | string | null;

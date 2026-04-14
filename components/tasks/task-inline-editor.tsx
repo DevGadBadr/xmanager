@@ -6,10 +6,10 @@ import { Calendar, Check, ChevronDown, CirclePlus, UserPlus } from "lucide-react
 import { toast } from "sonner";
 
 import { initialActionState } from "@/lib/action-state";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, resolveAppAssetUrl } from "@/lib/utils";
 import { updateTaskAction } from "@/modules/tasks/actions";
 import { TaskAssigneeSummary, getTaskAssigneeInitials, getTaskAssigneeLabel, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ type MembershipOption = {
   user: {
     fullName: string | null;
     email: string;
+    image: string | null;
   };
 };
 
@@ -537,6 +538,10 @@ export function TaskInlineEditor({
                     type="button"
                   >
                     <Avatar className="h-6 w-6">
+                      <AvatarImage
+                        alt={getTaskAssigneeLabel({ membershipId: membership.id, user: membership.user })}
+                        src={resolveAppAssetUrl(membership.user.image)}
+                      />
                       <AvatarFallback>{getTaskAssigneeInitials(getTaskAssigneeLabel({ membershipId: membership.id, user: membership.user }))}</AvatarFallback>
                     </Avatar>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">

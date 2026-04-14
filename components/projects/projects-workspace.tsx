@@ -58,7 +58,6 @@ export async function ProjectsWorkspace({
               canManageTasks={canManageTasks}
               key={projectWorkspace.id}
               memberships={memberships}
-              ownerLabel={projectWorkspace.owner.user.fullName ?? projectWorkspace.owner.user.email}
               projectDescription={projectWorkspace.description}
               projectName={projectWorkspace.name}
               projects={explorer.projects}

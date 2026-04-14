@@ -4,9 +4,8 @@ import { useRouter } from "next/navigation";
 
 import { DeleteTaskButton } from "@/components/forms/delete-task-button";
 import { useAppNavigation } from "@/components/providers/app-navigation-provider";
-import { TaskAssigneeSummary, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
-import { Badge } from "@/components/ui/badge";
-import { formatTaskStatus, normalizeTaskStatus } from "@/lib/task-status";
+import { ProjectTaskStatusControl } from "@/components/projects/task-status-control";
+import { TaskAssigneeGroup, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { cn, formatDate } from "@/lib/utils";
 
 type ActiveFilters = {
@@ -27,13 +26,13 @@ type TaskRow = {
 export function ProjectTaskTable({
   activeFilters,
   canManageTasks,
-  onStatusClick,
+  onAssigneeClick,
   tasks,
   returnTo,
 }: {
   activeFilters: ActiveFilters;
   canManageTasks: boolean;
-  onStatusClick: (status: string) => void;
+  onAssigneeClick: (membershipId: string) => void;
   tasks: TaskRow[];
   returnTo: string;
 }) {
@@ -62,7 +61,7 @@ export function ProjectTaskTable({
             activeFilters={activeFilters}
             canManageTasks={canManageTasks}
             key={task.id}
-            onStatusClick={onStatusClick}
+            onAssigneeClick={onAssigneeClick}
             openTask={openTask}
             task={task}
           />
@@ -87,7 +86,7 @@ export function ProjectTaskTable({
                 activeFilters={activeFilters}
                 canManageTasks={canManageTasks}
                 key={task.id}
-                onStatusClick={onStatusClick}
+                onAssigneeClick={onAssigneeClick}
                 openTask={openTask}
                 task={task}
               />
@@ -111,18 +110,16 @@ function TaskMetaCard({ label, value }: { label: string; value: string }) {
 function ProjectTaskMobileCard({
   activeFilters,
   canManageTasks,
-  onStatusClick,
+  onAssigneeClick,
   openTask,
   task,
 }: {
   activeFilters: ActiveFilters;
   canManageTasks: boolean;
-  onStatusClick: (status: string) => void;
+  onAssigneeClick: (membershipId: string) => void;
   openTask: (taskId: string) => void;
   task: TaskRow;
 }) {
-  const normalizedStatus = normalizeTaskStatus(task.status) ?? task.status;
-
   return (
     <div
       className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10"
@@ -148,28 +145,9 @@ function ProjectTaskMobileCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          aria-pressed={activeFilters.status === normalizedStatus}
-          className="appearance-none rounded-full border-0"
-          onClick={(event) => {
-            event.stopPropagation();
-            onStatusClick(normalizedStatus);
-          }}
-          onPointerDown={(event) => event.stopPropagation()}
-          type="button"
-        >
-          <Badge
-            className={cn(
-              "transition",
-              activeFilters.status === normalizedStatus
-                ? ""
-                : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-            )}
-            variant={activeFilters.status === normalizedStatus ? "default" : "neutral"}
-          >
-            {formatTaskStatus(normalizedStatus)}
-          </Badge>
-        </button>
+        <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+          <ProjectTaskStatusControl canManageTasks={canManageTasks} task={task} />
+        </div>
         <div
           className={cn(
             "rounded-full px-1.5 py-1",
@@ -177,8 +155,15 @@ function ProjectTaskMobileCard({
               task.assignees.some((assignee) => assignee.membershipId === activeFilters.assigneeId) &&
               "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
           )}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
-          <TaskAssigneeSummary assignees={task.assignees} />
+          <TaskAssigneeGroup
+            activeMembershipId={activeFilters.assigneeId}
+            assignees={task.assignees}
+            onAssigneeClick={onAssigneeClick}
+          />
         </div>
       </div>
 
@@ -193,18 +178,16 @@ function ProjectTaskMobileCard({
 function ProjectTaskTableRow({
   activeFilters,
   canManageTasks,
-  onStatusClick,
+  onAssigneeClick,
   openTask,
   task,
 }: {
   activeFilters: ActiveFilters;
   canManageTasks: boolean;
-  onStatusClick: (status: string) => void;
+  onAssigneeClick: (membershipId: string) => void;
   openTask: (taskId: string) => void;
   task: TaskRow;
 }) {
-  const normalizedStatus = normalizeTaskStatus(task.status) ?? task.status;
-
   return (
     <tr
       className="cursor-pointer border-b border-zinc-100 transition hover:bg-sky-50/60 dark:border-zinc-800 dark:hover:bg-sky-500/8"
@@ -221,33 +204,21 @@ function ProjectTaskTableRow({
               task.assignees.some((assignee) => assignee.membershipId === activeFilters.assigneeId) &&
               "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
           )}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
-          <TaskAssigneeSummary assignees={task.assignees} />
+          <TaskAssigneeGroup
+            activeMembershipId={activeFilters.assigneeId}
+            assignees={task.assignees}
+            onAssigneeClick={onAssigneeClick}
+          />
         </div>
       </td>
       <td className="px-4 py-3">
-        <button
-          aria-pressed={activeFilters.status === normalizedStatus}
-          className="appearance-none rounded-full border-0"
-          onClick={(event) => {
-            event.stopPropagation();
-            onStatusClick(normalizedStatus);
-          }}
-          onPointerDown={(event) => event.stopPropagation()}
-          type="button"
-        >
-          <Badge
-            className={cn(
-              "transition",
-              activeFilters.status === normalizedStatus
-                ? ""
-                : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-            )}
-            variant={activeFilters.status === normalizedStatus ? "default" : "neutral"}
-          >
-            {formatTaskStatus(normalizedStatus)}
-          </Badge>
-        </button>
+        <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+          <ProjectTaskStatusControl canManageTasks={canManageTasks} task={task} />
+        </div>
       </td>
       <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300">{formatDate(task.startDate)}</td>
       <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300">{formatDate(task.dueDate)}</td>
