@@ -73,6 +73,7 @@ export async function sendWorkspaceInviteEmail({
     subject: "You’ve been invited to join Flow",
     react: (
       <WorkspaceInviteEmail
+        brandLogoUrl={`${env.APP_URL}${ensureAppPath("/api/email-brand")}`}
         workspaceName={workspaceName}
         role={role}
         inviteUrl={inviteUrl}

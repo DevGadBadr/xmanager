@@ -7,10 +7,14 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
+
+import { ensureAppPath } from "@/lib/auth-path";
+import { getEnv } from "@/lib/env";
 
 type BaseTemplateProps = {
   preview: string;
@@ -21,6 +25,8 @@ type BaseTemplateProps = {
   ctaUrl: string;
   fallbackLabel: string;
   footer: string;
+  brandLogoUrl?: string;
+  brandSlogan?: string;
 };
 
 export function BaseTemplate({
@@ -32,13 +38,33 @@ export function BaseTemplate({
   ctaUrl,
   fallbackLabel,
   footer,
+  brandLogoUrl,
+  brandSlogan,
 }: BaseTemplateProps) {
+  const env = getEnv();
+  const resolvedBrandLogoUrl = brandLogoUrl ?? `${env.APP_URL}${ensureAppPath("/api/email-brand")}`;
+  const resolvedBrandSlogan = brandSlogan ?? "Xlabs Technology Management";
+
   return (
     <Html>
       <Head />
       <Preview>{preview}</Preview>
       <Body style={body}>
         <Container style={container}>
+          {resolvedBrandLogoUrl || resolvedBrandSlogan ? (
+            <Section style={brandSection}>
+              {resolvedBrandLogoUrl ? (
+                <Img
+                  alt="Flow logo"
+                  height="30"
+                  src={resolvedBrandLogoUrl}
+                  style={brandLogo}
+                  width="94"
+                />
+              ) : null}
+              {resolvedBrandSlogan ? <Text style={brandSloganStyle}>{resolvedBrandSlogan}</Text> : null}
+            </Section>
+          ) : null}
           <Heading style={headingStyle}>{heading}</Heading>
           <Text style={text}>{greeting}</Text>
           <Text style={text}>{context}</Text>
@@ -76,6 +102,29 @@ const headingStyle = {
   color: "#111827",
   fontSize: "24px",
   marginBottom: "20px",
+};
+
+const brandSection = {
+  backgroundColor: "#0f172a",
+  borderRadius: "16px",
+  marginBottom: "24px",
+  padding: "18px 20px",
+};
+
+const brandLogo = {
+  display: "block",
+  height: "30px",
+  margin: "0 0 10px",
+  width: "94px",
+};
+
+const brandSloganStyle = {
+  color: "#e2e8f0",
+  fontSize: "14px",
+  fontWeight: "600",
+  letterSpacing: "0.04em",
+  lineHeight: "20px",
+  margin: "0",
 };
 
 const text = {

@@ -5,10 +5,14 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
+
+import { ensureAppPath } from "@/lib/auth-path";
+import { getEnv } from "@/lib/env";
 
 type PasswordResetCodeEmailProps = {
   fullName: string;
@@ -18,12 +22,24 @@ type PasswordResetCodeEmailProps = {
 };
 
 export function PasswordResetCodeEmail(props: PasswordResetCodeEmailProps) {
+  const env = getEnv();
+
   return (
     <Html>
       <Head />
       <Preview>Your Flow password reset code is {props.code}.</Preview>
       <Body style={body}>
         <Container style={container}>
+          <Section style={brandSection}>
+            <Img
+              alt="Flow logo"
+              height="30"
+              src={`${env.APP_URL}${ensureAppPath("/api/email-brand")}`}
+              style={brandLogo}
+              width="94"
+            />
+            <Text style={brandSloganStyle}>Xlabs Technology Management</Text>
+          </Section>
           <Heading style={heading}>Reset your Flow password</Heading>
           <Text style={text}>Hello {props.fullName},</Text>
           <Text style={text}>
@@ -62,6 +78,29 @@ const heading = {
   color: "#111827",
   fontSize: "24px",
   marginBottom: "20px",
+};
+
+const brandSection = {
+  backgroundColor: "#0f172a",
+  borderRadius: "16px",
+  marginBottom: "24px",
+  padding: "18px 20px",
+};
+
+const brandLogo = {
+  display: "block",
+  height: "30px",
+  margin: "0 0 10px",
+  width: "94px",
+};
+
+const brandSloganStyle = {
+  color: "#e2e8f0",
+  fontSize: "14px",
+  fontWeight: "600",
+  letterSpacing: "0.04em",
+  lineHeight: "20px",
+  margin: "0",
 };
 
 const text = {
