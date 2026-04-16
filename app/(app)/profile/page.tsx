@@ -15,7 +15,7 @@ function getInitialFeedback(searchParams: { error?: string; google?: string }) {
   if (searchParams.error === "google-account-conflict") {
     return {
       kind: "error" as const,
-      message: "That Google account is already linked to another XManager user. Sign out and log in with Google instead.",
+      message: "That Google account is already linked to another Flow user. Sign out and log in with Google instead.",
     };
   }
 

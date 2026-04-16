@@ -12,14 +12,14 @@ type TeamAssignmentEmailProps = {
 export function TeamAssignmentEmail(props: TeamAssignmentEmailProps) {
   return (
     <BaseTemplate
-      preview="Your team membership has been updated in XManager."
+      preview="Your team membership has been updated in Flow."
       heading={`You’ve been added to the ${props.teamName} team`}
       greeting={`Hello ${props.fullName},`}
       context={`You were assigned to the ${props.teamName} team in the ${props.workspaceName} workspace.`}
       ctaLabel="Open Workspace"
       ctaUrl={props.workspaceUrl}
-      fallbackLabel="Open XManager"
-      footer="This is an automated notification from XManager."
+      fallbackLabel="Open Flow"
+      footer="This is an automated notification from Flow."
     />
   );
 }

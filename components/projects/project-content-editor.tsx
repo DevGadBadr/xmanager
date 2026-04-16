@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
+import { EditIconButton } from "@/components/shared/edit-icon-button";
 import { initialActionState } from "@/lib/action-state";
 import { updateProjectContentAction } from "@/modules/projects/actions";
 import { Button } from "@/components/ui/button";
@@ -130,25 +131,20 @@ export function ProjectContentEditor({
     <>
       <div className="min-w-0">
         {canEditContent ? (
-          <button
-            aria-label="Edit project"
-            className={
-              trigger === "icon"
-                ? "inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition hover:border-sky-300 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-sky-500/30 dark:hover:text-sky-300"
-                : "inline-flex max-w-full items-center gap-2 rounded-lg text-left text-3xl font-semibold tracking-tight text-zinc-950 transition hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-zinc-50 dark:hover:text-sky-300 sm:text-4xl"
-            }
-            onClick={(event) => openEditor(event.currentTarget)}
-            type="button"
-          >
-            {trigger === "icon" ? (
-              <Pencil className="h-4 w-4" />
-            ) : (
+          trigger === "icon" ? (
+            <EditIconButton label="Edit project" onClick={(event) => openEditor(event.currentTarget)} />
+          ) : (
+            <button
+              className="inline-flex max-w-full items-center gap-2 rounded-lg text-left text-3xl font-semibold tracking-tight text-zinc-950 transition hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-zinc-50 dark:hover:text-sky-300 sm:text-4xl"
+              onClick={(event) => openEditor(event.currentTarget)}
+              type="button"
+            >
               <>
                 <span className="truncate">{name}</span>
                 <Pencil className="h-4 w-4 shrink-0 text-zinc-400" />
               </>
-            )}
-          </button>
+            </button>
+          )
         ) : (
           <h1 className="truncate text-3xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-4xl">
             {name}

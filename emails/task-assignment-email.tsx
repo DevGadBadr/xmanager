@@ -13,7 +13,7 @@ type TaskAssignmentEmailProps = {
 export function TaskAssignmentEmail(props: TaskAssignmentEmailProps) {
   return (
     <BaseTemplate
-      preview="A task has been assigned to you in XManager."
+      preview="A task has been assigned to you in Flow."
       heading={`New task assigned: ${props.taskTitle}`}
       greeting={`Hello ${props.fullName},`}
       context={`You have been assigned the task "${props.taskTitle}" in project ${props.projectName}. Due date: ${props.dueDate}.`}

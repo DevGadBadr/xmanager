@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { AppLogo } from "@/components/shared/app-logo";
 import { PendingLink } from "@/components/shared/pending-link";
 import { ExplorerTree } from "@/components/workspace/explorer-tree";
 import { cn } from "@/lib/utils";
@@ -103,9 +104,9 @@ export function AppSidebar({
         aria-label={workspaceName}
         className="mb-5 rounded-2xl border border-zinc-200 bg-white px-3.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold tracking-[0.08em] text-zinc-950 dark:text-zinc-50">XManager</h1>
+            <AppLogo imageClassName="h-7 w-auto" />
             {isMobile ? (
               <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                 {workspaceName}

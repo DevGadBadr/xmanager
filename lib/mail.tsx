@@ -70,7 +70,7 @@ export async function sendWorkspaceInviteEmail({
 
   await sendMail({
     to,
-    subject: "You’ve been invited to join XManager",
+    subject: "You’ve been invited to join Flow",
     react: (
       <WorkspaceInviteEmail
         workspaceName={workspaceName}
@@ -161,7 +161,7 @@ export async function sendWelcomeEmail({
 }) {
   await sendMail({
     to,
-    subject: "Welcome to XManager",
+    subject: "Welcome to Flow",
     react: (
       <WelcomeEmail
         fullName={fullName}
@@ -187,7 +187,7 @@ export async function sendPasswordResetCodeEmail({
 
   await sendMail({
     to,
-    subject: "Your XManager password reset code",
+    subject: "Your Flow password reset code",
     react: (
       <PasswordResetCodeEmail
         code={code}

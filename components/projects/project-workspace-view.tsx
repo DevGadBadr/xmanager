@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { LayoutGrid, Rows3, Search, X } from "lucide-react";
+import { Filter, LayoutGrid, Rows3, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { DeleteTaskButton } from "@/components/forms/delete-task-button";
@@ -12,19 +12,14 @@ import { ProjectTaskStatusControl } from "@/components/projects/task-status-cont
 import { ProjectTaskTable } from "@/components/projects/task-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PendingLink } from "@/components/shared/pending-link";
-import { TaskAssigneeGroup, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
+import { TaskAssigneeGroup, getTaskAssigneeLabel, type TaskAssigneeView } from "@/components/tasks/task-assignee-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { TASK_STATUS_OPTIONS, formatTaskStatus, isOpenTaskStatus, normalizeTaskStatus } from "@/lib/task-status";
+import { TASK_STATUS_OPTIONS, isOpenTaskStatus, normalizeTaskStatus } from "@/lib/task-status";
 import { cn, formatDate } from "@/lib/utils";
-
-type AssigneeOption = {
-  id: string;
-  label: string;
-};
 
 type TaskRow = {
   id: string;
@@ -91,7 +86,6 @@ const BOARD_COLUMNS: BoardColumn[] = [
 ];
 
 export function ProjectWorkspaceView({
-  assignees,
   canEditProjectContent,
   canManageTasks,
   memberships,
@@ -100,8 +94,8 @@ export function ProjectWorkspaceView({
   projects,
   tasks,
   selectedProjectId,
+  storageScope,
 }: {
-  assignees: AssigneeOption[];
   canEditProjectContent: boolean;
   canManageTasks: boolean;
   memberships: Array<{ id: string; user: { fullName: string | null; email: string; image: string | null } }>;
@@ -110,10 +104,13 @@ export function ProjectWorkspaceView({
   projects: ProjectOption[];
   tasks: TaskRow[];
   selectedProjectId: string;
+  storageScope: string;
 }) {
   const pathname = usePathname();
   const [storedFilters, setStoredFilters] = useState<StoredProjectFilters>(DEFAULT_PROJECT_FILTERS);
   const [expandedSearchProjectId, setExpandedSearchProjectId] = useState<string | null>(null);
+  const [filtersVisible, setFiltersVisible] = useState(true);
+  const [filtersVisibleReady, setFiltersVisibleReady] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const assigneeId = storedFilters.assigneeId;
   const search = storedFilters.search;
@@ -121,6 +118,32 @@ export function ProjectWorkspaceView({
   const viewMode = storedFilters.viewMode;
   const deferredSearch = useDeferredValue(search);
   const isSearchOpen = Boolean(search) || expandedSearchProjectId === selectedProjectId;
+
+  useEffect(() => {
+    try {
+      const storedValue = window.localStorage.getItem(getProjectFilterVisibilityStorageKey(storageScope));
+
+      if (storedValue !== null) {
+        setFiltersVisible(storedValue === "true");
+      }
+    } catch {
+      // Ignore storage access failures and keep the default visible state.
+    } finally {
+      setFiltersVisibleReady(true);
+    }
+  }, [storageScope]);
+
+  useEffect(() => {
+    if (!filtersVisibleReady) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(getProjectFilterVisibilityStorageKey(storageScope), String(filtersVisible));
+    } catch {
+      // Ignore storage access failures and keep the in-memory state only.
+    }
+  }, [filtersVisible, filtersVisibleReady, storageScope]);
 
   useEffect(() => {
     setStoredFilters(DEFAULT_PROJECT_FILTERS);
@@ -176,6 +199,23 @@ export function ProjectWorkspaceView({
     [visibleTasks],
   );
 
+  const taskAssignees = useMemo(() => {
+    const uniqueAssignees = new Map<string, { id: string; label: string }>();
+
+    for (const task of tasks) {
+      for (const assignee of task.assignees) {
+        if (!uniqueAssignees.has(assignee.membershipId)) {
+          uniqueAssignees.set(assignee.membershipId, {
+            id: assignee.membershipId,
+            label: getTaskAssigneeLabel(assignee),
+          });
+        }
+      }
+    }
+
+    return Array.from(uniqueAssignees.values()).sort((left, right) => left.label.localeCompare(right.label));
+  }, [tasks]);
+
   const openTaskCount = useMemo(
     () => tasks.filter((task) => isOpenTaskStatus(task.status)).length,
     [tasks],
@@ -219,6 +259,10 @@ export function ProjectWorkspaceView({
       assigneeId: null,
       status: current.status === status ? null : status,
     }));
+  };
+
+  const toggleFiltersVisible = () => {
+    setFiltersVisible((current) => !current);
   };
 
   return (
@@ -323,7 +367,7 @@ export function ProjectWorkspaceView({
                       </div>
                     </div>
                     <MetricChip label="Open tasks" value={String(openTaskCount)} />
-                    <MetricChip label="Members" value={String(assignees.length)} />
+                    <MetricChip label="Assignees" value={String(taskAssignees.length)} />
                     {canEditProjectContent ? (
                       <ProjectContentEditor
                         canEditContent
@@ -333,6 +377,18 @@ export function ProjectWorkspaceView({
                         trigger="icon"
                       />
                     ) : null}
+                    <Button
+                      aria-controls="project-filter-panel"
+                      aria-expanded={filtersVisible}
+                      aria-label={filtersVisible ? "Hide filters" : "Show filters"}
+                      className={cn("h-8 w-8 shrink-0 rounded-full", filtersVisible && "bg-zinc-100 dark:bg-zinc-800")}
+                      onClick={toggleFiltersVisible}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Filter className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -366,66 +422,74 @@ export function ProjectWorkspaceView({
           </div>
         </div>
 
-        <div className="mt-3 space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <div className="flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-start xl:gap-6">
-            <div className="min-w-0">
-              <ProjectFilterSection label="Status">
-                {TASK_STATUS_OPTIONS.map((option) => {
-                  const selected = status === option.value;
+        {filtersVisible ? (
+          <div
+            className="mt-3 space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-800"
+            id="project-filter-panel"
+          >
+            <div className="flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-start xl:gap-6">
+              <div className="min-w-0">
+                <ProjectFilterSection label="Status">
+                  {TASK_STATUS_OPTIONS.map((option) => {
+                    const selected = status === option.value;
 
-                  return (
-                    <button
-                      aria-pressed={selected}
-                      className="appearance-none rounded-full border-0"
-                      key={option.value}
-                      onClick={() => toggleStatusFilter(option.value)}
-                      type="button"
-                    >
-                      <Badge
-                        className={cn(
-                          "px-2.5 py-1 text-[10px] transition",
-                          !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-                        )}
-                        variant={selected ? "default" : "neutral"}
+                    return (
+                      <button
+                        aria-pressed={selected}
+                        className="appearance-none rounded-full border-0"
+                        key={option.value}
+                        onClick={() => toggleStatusFilter(option.value)}
+                        type="button"
                       >
-                        {option.label}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </ProjectFilterSection>
-            </div>
+                        <Badge
+                          className={cn(
+                            "px-2.5 py-1 text-[10px] transition",
+                            !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+                          )}
+                          variant={selected ? "default" : "neutral"}
+                        >
+                          {option.label}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </ProjectFilterSection>
+              </div>
 
-            <div className="min-w-0">
-              <ProjectFilterSection label="Assignees">
-                {assignees.map((assignee) => {
-                  const selected = assigneeId === assignee.id;
+              <div className="min-w-0">
+                <ProjectFilterSection label="Assignees">
+                  {taskAssignees.length > 0 ? (
+                    taskAssignees.map((assignee) => {
+                      const selected = assigneeId === assignee.id;
 
-                  return (
-                    <button
-                      aria-pressed={selected}
-                      className="appearance-none rounded-full border-0"
-                      key={assignee.id}
-                      onClick={() => toggleAssigneeFilter(assignee.id)}
-                      type="button"
-                    >
-                      <Badge
-                        className={cn(
-                          "px-2.5 py-1 text-[10px] transition",
-                          !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-                        )}
-                        variant={selected ? "default" : "neutral"}
-                      >
-                        {assignee.label}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </ProjectFilterSection>
+                      return (
+                        <button
+                          aria-pressed={selected}
+                          className="appearance-none rounded-full border-0"
+                          key={assignee.id}
+                          onClick={() => toggleAssigneeFilter(assignee.id)}
+                          type="button"
+                        >
+                          <Badge
+                            className={cn(
+                              "px-2.5 py-1 text-[10px] transition",
+                              !selected && "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+                            )}
+                            variant={selected ? "default" : "neutral"}
+                          >
+                            {assignee.label}
+                          </Badge>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">No assignees on tasks yet.</p>
+                  )}
+                </ProjectFilterSection>
+              </div>
             </div>
           </div>
-
-        </div>
+        ) : null}
       </div>
 
       {visibleTasks.length > 0 ? (
@@ -634,4 +698,8 @@ function ProjectFilterSection({
       <div className="flex flex-wrap items-center justify-center gap-2 xl:flex-1 xl:justify-start">{children}</div>
     </div>
   );
+}
+
+function getProjectFilterVisibilityStorageKey(storageScope: string) {
+  return `xmanager:project-workspace:${storageScope}:filters-visible`;
 }

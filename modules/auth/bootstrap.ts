@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 const DEFAULT_OWNER_EMAIL = (process.env.DEFAULT_OWNER_EMAIL ?? "owner@example.com")
   .trim()
   .toLowerCase();
-const DEFAULT_WORKSPACE_NAME = process.env.DEFAULT_WORKSPACE_NAME ?? "XManager Workspace";
+const DEFAULT_WORKSPACE_NAME = process.env.DEFAULT_WORKSPACE_NAME ?? "Flow Workspace";
 const DEFAULT_TEAM_NAME = "Core Delivery";
 const DEFAULT_PROJECT_KEY = "LAUNCH";
 const DEFAULT_PROJECT_NAME = "Workspace Launch";

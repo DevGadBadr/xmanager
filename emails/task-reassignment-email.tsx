@@ -12,7 +12,7 @@ type TaskReassignmentEmailProps = {
 export function TaskReassignmentEmail(props: TaskReassignmentEmailProps) {
   return (
     <BaseTemplate
-      preview="Ownership of a task has changed in XManager."
+      preview="Ownership of a task has changed in Flow."
       heading={`Task reassigned: ${props.taskTitle}`}
       greeting={`Hello ${props.fullName},`}
       context={`The task "${props.taskTitle}" in project ${props.projectName} has been reassigned to you.`}

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
 
+import { EditIconButton } from "@/components/shared/edit-icon-button";
 import { initialActionState } from "@/lib/action-state";
 import { updateTaskContentAction } from "@/modules/tasks/actions";
 import { Button } from "@/components/ui/button";
@@ -129,17 +130,16 @@ export function TaskContentEditor({
   return (
     <>
       <div className="space-y-2">
-        {canEditContent ? (
-          <button
-            className="block max-w-full rounded-xl text-left transition hover:text-sky-700 dark:hover:text-sky-300"
-            onClick={(event) => openEditor("title", event.currentTarget)}
-            type="button"
-          >
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h2>
-          </button>
-        ) : (
-          <h2 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h2>
-        )}
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="min-w-0 flex-1 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h2>
+          {canEditContent ? (
+            <EditIconButton
+              className="shrink-0"
+              label="Edit task"
+              onClick={(event) => openEditor("title", event.currentTarget)}
+            />
+          ) : null}
+        </div>
       </div>
 
       {canEditContent ? (

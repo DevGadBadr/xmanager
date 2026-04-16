@@ -20,7 +20,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_ENV: appEnvironmentSchema.optional(),
   NEXT_PUBLIC_APP_BASE_PATH: z.string().optional(),
   INVITE_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(168),
-  DEFAULT_WORKSPACE_NAME: z.string().min(1).default("XManager Workspace"),
+  DEFAULT_WORKSPACE_NAME: z.string().min(1).default("Flow Workspace"),
   DEFAULT_OWNER_EMAIL: z.string().email().default("owner@example.com"),
 });
 

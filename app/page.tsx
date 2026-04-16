@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, CheckCircle2, FolderKanban, MessageSquare, Users } from "lucide-react";
 
+import { AppLogo } from "@/components/shared/app-logo";
 import { SignInButton } from "@/components/shared/sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,9 +57,9 @@ export default async function Home() {
       <div aria-hidden="true" className="landing-aurora landing-aurora-right" />
 
       <header className="landing-reveal landing-delay-1 flex items-center justify-between rounded-[28px] border border-white/65 bg-white/80 px-5 py-4 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.45)] backdrop-blur dark:border-white/10 dark:bg-zinc-950/75">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600 dark:text-sky-300">XManager</p>
-          <h1 className="mt-1 text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+        <div className="space-y-2">
+          <AppLogo imageClassName="h-8 w-auto" priority />
+          <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
             Shared control for the teams doing the work
           </h1>
         </div>
@@ -77,9 +78,8 @@ export default async function Home() {
                 A steadier way to run projects, follow tasks, and keep accountability visible.
               </h2>
               <p className="landing-reveal landing-delay-3 max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-300">
-                XManager gives operational teams one workspace for project structure, task ownership, comments,
-                deadlines, and activity so people spend less time asking for updates and more time moving work
-                forward.
+                Flow gives operational teams one workspace for project structure, task ownership, comments, deadlines,
+                and activity so people spend less time asking for updates and more time moving work forward.
               </p>
             </div>
           </div>
@@ -87,7 +87,7 @@ export default async function Home() {
           <div className="landing-reveal landing-delay-4 flex flex-wrap gap-4">
             <SignInButton label="Enter workspace" />
             <Button asChild size="lg" variant="outline">
-              <Link href="#inside-xmanager">
+              <Link href="#inside-flow">
                 See how it feels
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -196,14 +196,14 @@ export default async function Home() {
         </Card>
       </section>
 
-      <section className="grid gap-4 pb-12 lg:grid-cols-[0.92fr_1.08fr]" id="inside-xmanager">
+      <section className="grid gap-4 pb-12 lg:grid-cols-[0.92fr_1.08fr]" id="inside-flow">
         <Card className="landing-reveal landing-delay-2 rounded-[30px] border-white/70 bg-[linear-gradient(145deg,rgba(14,165,233,0.13),rgba(255,255,255,0.9))] shadow-[0_26px_70px_-40px_rgba(15,23,42,0.52)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(14,165,233,0.18),rgba(9,12,18,0.92))]">
           <CardContent className="space-y-5 p-7">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 dark:text-sky-300">
               Why it feels different
             </p>
             <h3 className="max-w-xl text-3xl font-semibold tracking-[-0.03em] text-zinc-950 dark:text-zinc-50">
-              XManager is built for the working day, not for sounding impressive in a pitch.
+              Flow is built for the working day, not for sounding impressive in a pitch.
             </h3>
             <div className="space-y-4 text-base leading-7 text-zinc-700 dark:text-zinc-300">
               <p>

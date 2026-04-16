@@ -21,13 +21,13 @@ export function PasswordResetCodeEmail(props: PasswordResetCodeEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Your XManager password reset code is {props.code}.</Preview>
+      <Preview>Your Flow password reset code is {props.code}.</Preview>
       <Body style={body}>
         <Container style={container}>
-          <Heading style={heading}>Reset your XManager password</Heading>
+          <Heading style={heading}>Reset your Flow password</Heading>
           <Text style={text}>Hello {props.fullName},</Text>
           <Text style={text}>
-            Use the one-time code below to reset the password for your invited XManager email.
+            Use the one-time code below to reset the password for your invited Flow email.
           </Text>
           <Section style={codeCard}>
             <Text style={codeLabel}>Password reset code</Text>

@@ -22,7 +22,7 @@ export const IS_DEVELOPMENT_APP = APP_ENV === "development";
 export const APP_BASE_PATH = normalizeBasePath(
   process.env.NEXT_PUBLIC_APP_BASE_PATH ??
     process.env.APP_BASE_PATH ??
-    (IS_DEVELOPMENT_APP ? "/xmanager" : ""),
+    (IS_DEVELOPMENT_APP ? "/flow" : ""),
 );
 export const AUTH_API_PATH = ensureAppPath("/api/auth");
 

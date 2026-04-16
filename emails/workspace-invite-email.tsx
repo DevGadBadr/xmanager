@@ -13,9 +13,9 @@ export function WorkspaceInviteEmail(props: WorkspaceInviteEmailProps) {
   return (
     <BaseTemplate
       preview="Access your workspace and complete your account setup."
-      heading="You’ve been invited to join XManager"
+      heading="You’ve been invited to join Flow"
       greeting="Hello,"
-      context={`You have been invited to join the ${props.workspaceName} workspace in XManager as ${props.role}.`}
+      context={`You have been invited to join the ${props.workspaceName} workspace in Flow as ${props.role}.`}
       ctaLabel="Accept Invitation"
       ctaUrl={props.inviteUrl}
       fallbackLabel="If the button does not work, use this link"

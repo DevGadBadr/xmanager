@@ -336,7 +336,7 @@ export async function acceptInvitation(input: {
     workspaceId: invitation.workspaceId,
     userId: result.user.id,
     type: "WELCOME",
-    title: "Welcome to XManager",
+    title: "Welcome to Flow",
     body: `Your access to ${invitation.workspace.name} is active.`,
     link: "/dashboard",
   });

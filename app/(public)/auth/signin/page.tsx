@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PasswordResetFlow } from "@/components/forms/password-reset-flow";
+import { AppLogo } from "@/components/shared/app-logo";
 import { SignInForm } from "@/components/forms/sign-in-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,8 @@ export default async function SignInPage({
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
       <Card className="w-full max-w-lg">
         <CardHeader className="space-y-3">
-          <CardTitle>Sign in to XManager</CardTitle>
+          <AppLogo imageClassName="h-9 w-auto" />
+          <CardTitle>Sign in to Flow</CardTitle>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Use the email and password you created from your workspace invite, or sign in with a
             Google account you already linked from your profile.

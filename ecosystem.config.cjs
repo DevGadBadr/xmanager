@@ -23,9 +23,9 @@ module.exports = {
       env: {
         NODE_ENV: "development",
         APP_ENV: "development",
-        APP_BASE_PATH: "/xmanager",
+        APP_BASE_PATH: "/flow",
         NEXT_PUBLIC_APP_ENV: "development",
-        NEXT_PUBLIC_APP_BASE_PATH: "/xmanager",
+        NEXT_PUBLIC_APP_BASE_PATH: "/flow",
       },
     },
   ],

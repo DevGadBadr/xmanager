@@ -28,15 +28,6 @@ export async function ProjectsWorkspace({
   const canEditProjectContent = projectWorkspace
     ? projectWorkspace.ownerMembershipId === membership.id || membership.role === "OWNER" || membership.role === "ADMIN"
     : false;
-  const filterAssignees = projectWorkspace
-    ? projectWorkspace.members.map((member) => ({
-        id: member.membership.id,
-        label: member.membership.user.fullName ?? member.membership.user.email,
-      }))
-    : memberships.map((membership) => ({
-        id: membership.id,
-        label: membership.user.fullName ?? membership.user.email,
-      }));
   const projectTasks = projectWorkspace
     ? projectWorkspace.tasks.map((task) => ({
         ...task,
@@ -53,7 +44,6 @@ export async function ProjectsWorkspace({
         {projectWorkspace ? (
           <>
             <ProjectWorkspaceView
-              assignees={filterAssignees}
               canEditProjectContent={canEditProjectContent}
               canManageTasks={canManageTasks}
               key={projectWorkspace.id}
@@ -62,6 +52,7 @@ export async function ProjectsWorkspace({
               projectName={projectWorkspace.name}
               projects={explorer.projects}
               selectedProjectId={projectWorkspace.id}
+              storageScope={workspaceId}
               tasks={projectTasks}
             />
           </>
