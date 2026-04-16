@@ -60,7 +60,7 @@ export default async function Home() {
         <div className="space-y-2">
           <AppLogo imageClassName="h-8 w-auto" priority />
           <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
-            Shared control for the teams doing the work
+            X-Labs Technology Management
           </h1>
         </div>
         <SignInButton label="Enter workspace" />
@@ -70,7 +70,7 @@ export default async function Home() {
         <div className="space-y-8">
           <div className="space-y-6">
             <p className="landing-reveal landing-delay-1 inline-flex rounded-full border border-sky-200/80 bg-white/85 px-4 py-2 text-sm font-medium text-sky-700 shadow-sm dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-200">
-              Built for invited teams that need a clean view of what is moving and what needs attention
+              Built for X-Labs teams that need a clean view of what is moving and what needs attention
             </p>
 
             <div className="space-y-4">
