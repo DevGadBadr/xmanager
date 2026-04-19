@@ -8,6 +8,8 @@ import { AppNavigationProvider, useAppNavigation } from "@/components/providers/
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
+const DESKTOP_SIDEBAR_STORAGE_KEY = "xmanager:app-shell:desktop-sidebar-collapsed";
+
 export function AppShell({
   sidebar,
   topbar,
@@ -37,6 +39,30 @@ function ShellFrame({
 }) {
   const { busyMessage, isBusy } = useAppNavigation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  const [desktopSidebarPreferenceReady, setDesktopSidebarPreferenceReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      setDesktopSidebarCollapsed(window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY) === "true");
+    } catch {
+      // Keep the default expanded state when storage is unavailable.
+    } finally {
+      setDesktopSidebarPreferenceReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!desktopSidebarPreferenceReady) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(DESKTOP_SIDEBAR_STORAGE_KEY, String(desktopSidebarCollapsed));
+    } catch {
+      // Ignore storage failures and keep the in-memory state.
+    }
+  }, [desktopSidebarCollapsed, desktopSidebarPreferenceReady]);
 
   useEffect(() => {
     if (!mobileSidebarOpen) {
@@ -55,9 +81,19 @@ function ShellFrame({
   }, [mobileSidebarOpen]);
 
   const sidebarElement = React.isValidElement(sidebar)
-    ? React.cloneElement(sidebar as React.ReactElement<{ mode?: "desktop" | "mobile"; onNavigate?: () => void }>, {
-        mode: "desktop",
-      })
+    ? React.cloneElement(
+        sidebar as React.ReactElement<{
+          collapsed?: boolean;
+          mode?: "desktop" | "mobile";
+          onNavigate?: () => void;
+          onToggleSidebar?: () => void;
+        }>,
+        {
+          collapsed: desktopSidebarCollapsed,
+          mode: "desktop",
+          onToggleSidebar: () => setDesktopSidebarCollapsed((current) => !current),
+        },
+      )
     : sidebar;
   const mobileSidebarElement = React.isValidElement(sidebar)
     ? React.cloneElement(sidebar as React.ReactElement<{ mode?: "desktop" | "mobile"; onNavigate?: () => void }>, {
