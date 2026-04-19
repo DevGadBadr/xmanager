@@ -9,7 +9,8 @@ import { PasswordResetCodeEmail } from "@/emails/password-reset-code-email";
 import { TaskReassignmentEmail } from "@/emails/task-reassignment-email";
 import { WelcomeEmail } from "@/emails/welcome-email";
 import { WorkspaceInviteEmail } from "@/emails/workspace-invite-email";
-import { ensureAppPath } from "@/lib/auth-path";
+import { resolveAppUrl } from "@/lib/auth-path";
+import { getEmailBrandUrl } from "@/lib/email-brand";
 import { getEnv } from "@/lib/env";
 import { formatDate } from "@/lib/utils";
 
@@ -73,7 +74,7 @@ export async function sendWorkspaceInviteEmail({
     subject: "You’ve been invited to join Flow",
     react: (
       <WorkspaceInviteEmail
-        brandLogoUrl={`${env.APP_URL}${ensureAppPath("/api/email-brand")}`}
+        brandLogoUrl={getEmailBrandUrl(env.APP_URL)}
         workspaceName={workspaceName}
         role={role}
         inviteUrl={inviteUrl}
@@ -194,7 +195,7 @@ export async function sendPasswordResetCodeEmail({
         code={code}
         expiryMinutes={expiryMinutes}
         fullName={fullName}
-        signInUrl={`${env.APP_URL}${ensureAppPath("/auth/signin")}`}
+        signInUrl={resolveAppUrl(env.APP_URL, "/auth/signin")}
       />
     ),
   });

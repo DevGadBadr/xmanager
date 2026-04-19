@@ -13,7 +13,7 @@ import {
   Text,
 } from "@react-email/components";
 
-import { ensureAppPath } from "@/lib/auth-path";
+import { getEmailBrandUrl } from "@/lib/email-brand";
 import { getEnv } from "@/lib/env";
 
 type BaseTemplateProps = {
@@ -42,7 +42,7 @@ export function BaseTemplate({
   brandSlogan,
 }: BaseTemplateProps) {
   const env = getEnv();
-  const resolvedBrandLogoUrl = brandLogoUrl ?? `${env.APP_URL}${ensureAppPath("/api/email-brand")}`;
+  const resolvedBrandLogoUrl = brandLogoUrl ?? getEmailBrandUrl(env.APP_URL);
   const resolvedBrandSlogan = brandSlogan ?? "Xlabs Technology Management";
 
   return (
@@ -56,10 +56,10 @@ export function BaseTemplate({
               {resolvedBrandLogoUrl ? (
                 <Img
                   alt="Flow logo"
-                  height="30"
+                  height="42"
                   src={resolvedBrandLogoUrl}
                   style={brandLogo}
-                  width="94"
+                  width="132"
                 />
               ) : null}
               {resolvedBrandSlogan ? <Text style={brandSloganStyle}>{resolvedBrandSlogan}</Text> : null}
@@ -113,16 +113,17 @@ const brandSection = {
 
 const brandLogo = {
   display: "block",
-  height: "30px",
-  margin: "0 0 10px",
-  width: "94px",
+  height: "42px",
+  margin: "0 0 8px",
+  maxWidth: "100%",
+  width: "132px",
 };
 
 const brandSloganStyle = {
   color: "#e2e8f0",
   fontSize: "14px",
   fontWeight: "600",
-  letterSpacing: "0.04em",
+  letterSpacing: "0.02em",
   lineHeight: "20px",
   margin: "0",
 };

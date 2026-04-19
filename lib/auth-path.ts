@@ -40,6 +40,17 @@ export function ensureAppPath(pathname: string) {
   return normalizedPath === "/" ? APP_BASE_PATH : `${APP_BASE_PATH}${normalizedPath}`;
 }
 
+export function resolveAppUrl(appUrl: string, pathname: string) {
+  const url = new URL(appUrl);
+  const appPathUrl = new URL(ensureAppPath(pathname), url.origin);
+
+  url.pathname = appPathUrl.pathname;
+  url.search = appPathUrl.search;
+  url.hash = appPathUrl.hash;
+
+  return url.toString();
+}
+
 export function resolveAuthUrl(value?: string | null) {
   if (!value) {
     return undefined;

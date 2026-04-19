@@ -11,7 +11,7 @@ import {
   Text,
 } from "@react-email/components";
 
-import { ensureAppPath } from "@/lib/auth-path";
+import { getEmailBrandUrl } from "@/lib/email-brand";
 import { getEnv } from "@/lib/env";
 
 type PasswordResetCodeEmailProps = {
@@ -33,10 +33,10 @@ export function PasswordResetCodeEmail(props: PasswordResetCodeEmailProps) {
           <Section style={brandSection}>
             <Img
               alt="Flow logo"
-              height="30"
-              src={`${env.APP_URL}${ensureAppPath("/api/email-brand")}`}
+              height="42"
+              src={getEmailBrandUrl(env.APP_URL)}
               style={brandLogo}
-              width="94"
+              width="132"
             />
             <Text style={brandSloganStyle}>Xlabs Technology Management</Text>
           </Section>
@@ -89,16 +89,17 @@ const brandSection = {
 
 const brandLogo = {
   display: "block",
-  height: "30px",
-  margin: "0 0 10px",
-  width: "94px",
+  height: "42px",
+  margin: "0 0 8px",
+  maxWidth: "100%",
+  width: "132px",
 };
 
 const brandSloganStyle = {
   color: "#e2e8f0",
   fontSize: "14px",
   fontWeight: "600",
-  letterSpacing: "0.04em",
+  letterSpacing: "0.02em",
   lineHeight: "20px",
   margin: "0",
 };
