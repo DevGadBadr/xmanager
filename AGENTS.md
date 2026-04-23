@@ -7,29 +7,29 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Live Environment Notes
 
 ### Production server
-- Public URL: `https://flow.devgadbadr.com`
+- Public URL: `https://flow.devgadbadr.me`
 - PM2 app: `xmanager-3008`
 - Runtime: `next start -p 3008`
 - `NODE_ENV=production`
 - `APP_ENV=production`
 - `APP_BASE_PATH=` empty string
 - `NEXT_PUBLIC_APP_BASE_PATH=` empty string
-- Canonical auth URL: `https://flow.devgadbadr.com/api/auth`
-- Canonical app URL: `https://flow.devgadbadr.com`
+- Canonical auth URL: `https://flow.devgadbadr.me/api/auth`
+- Canonical app URL: `https://flow.devgadbadr.me`
 - Reverse proxy: Nginx proxies `/` to `http://localhost:3008`
 
 ### Development server
-- Public URL: `https://devgadbadr.com/flow`
+- Public URL: `https://devgadbadr.me/flow`
 - PM2 app: `xmanager-dev-3018`
 - Runtime: `next dev -p 3018 --hostname 127.0.0.1`
 - `NODE_ENV=development`
 - `APP_ENV=development`
 - `APP_BASE_PATH=/flow`
 - `NEXT_PUBLIC_APP_BASE_PATH=/flow`
-- Canonical auth URL: `https://devgadbadr.com/flow/api/auth`
-- Canonical app URL: `https://devgadbadr.com/flow`
+- Canonical auth URL: `https://devgadbadr.me/flow/api/auth`
+- Canonical app URL: `https://devgadbadr.me/flow`
 - Reverse proxy: Nginx keeps the `/flow` prefix intact and proxies to `http://127.0.0.1:3018`
-- TLS: Let's Encrypt cert at `/etc/letsencrypt/live/flow.devgadbadr.com/`
+- TLS: Let's Encrypt cert at `/etc/letsencrypt/live/flow.devgadbadr.me/`
 - Basic auth is enabled at Nginx for the dev app route
   - Username: `xmanagerdev`
   - Password: `Cial8YnyXl8YRCiX+jJCnBq/4WHMSJty`
@@ -43,14 +43,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - The app is environment-aware through `lib/auth-path.ts` and `next.config.ts`.
 - Production must run at the host root with no base path.
 - Development must keep the `/flow` base path.
-- `next.config.ts` uses `allowedDevOrigins: ["devgadbadr.com"]` for dev.
+- `next.config.ts` uses `allowedDevOrigins: ["devgadbadr.me"]` for dev.
 - Auth URLs and generated links must stay environment-specific.
 - Current prod and dev use the same database and Google OAuth credentials unless changed later.
 
 ### Nginx notes
-- Live prod Nginx config is outside the repo at `/etc/nginx/sites-available/devgadbadr.com`
+- Live prod Nginx config is outside the repo at `/etc/nginx/sites-available/devgadbadr.me`
 - Live dev HTTPS Nginx config is currently in `/etc/nginx/sites-available/default`
-- Repo reference template for prod host: `/root/Gad/web/Apps/xmanager/infra/nginx/flow.devgadbadr.com.conf`
+- Repo reference template for prod host: `/root/Gad/web/Apps/xmanager/infra/nginx/flow.devgadbadr.me.conf`
 
 ### Operational cautions
 - Do not remove the dev `/flow` base-path behavior unless explicitly requested.

@@ -12,8 +12,8 @@ Open `http://localhost:3000`.
 
 Flow supports two deployment shapes:
 
-- Production: `https://flow.devgadbadr.com`
-- Development HTTPS route: `https://devgadbadr.com/flow`
+- Production: `https://flow.devgadbadr.me`
+- Development HTTPS route: `https://devgadbadr.me/flow`
 
 The deployment shape is driven by these env vars:
 
@@ -45,11 +45,11 @@ pm2 save
 ## HTTPS Routing
 
 The Nginx template for the production host lives at
-[`infra/nginx/flow.devgadbadr.com.conf`](/root/Gad/web/Apps/xmanager/infra/nginx/flow.devgadbadr.com.conf).
+[`infra/nginx/flow.devgadbadr.me.conf`](infra/nginx/flow.devgadbadr.me.conf).
 
 Google OAuth must include:
 
-- Authorized JavaScript origin: `https://flow.devgadbadr.com`
-- Authorized redirect URI: `https://flow.devgadbadr.com/api/auth/callback/google`
-- Authorized JavaScript origin: `https://devgadbadr.com`
-- Authorized redirect URI: `https://devgadbadr.com/flow/api/auth/callback/google`
+- Authorized JavaScript origin: `https://flow.devgadbadr.me`
+- Authorized redirect URI: `https://flow.devgadbadr.me/api/auth/callback/google`
+- Authorized JavaScript origin: `https://devgadbadr.me`
+- Authorized redirect URI: `https://devgadbadr.me/flow/api/auth/callback/google`
