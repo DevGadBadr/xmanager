@@ -13,7 +13,7 @@ Any UI changes in this app should follow the existing xmanager visual language u
 
 ## Color And Surfaces
 
-- Match the app palette already defined in [app/globals.css](/root/Gad/web/Apps/xmanager/app/globals.css): soft slate background, white cards, zinc neutrals, sky primary accents.
+- Match the app palette already defined in [app/globals.css](/root/Gad/web/Apps/flow/app/globals.css): soft slate background, white cards, zinc neutrals, sky primary accents.
 - In dark mode, keep contrast strong but avoid pure black panels unless already present.
 - Use red only for destructive actions, amber for warnings, emerald for success, and neutral zinc for secondary UI.
 - New surfaces should usually look like existing cards and dialogs: rounded `2xl`, subtle border, low shadow, readable contrast.
@@ -29,8 +29,8 @@ Any UI changes in this app should follow the existing xmanager visual language u
 
 - Reuse shared primitives in `components/ui` before creating custom styling.
 - Prefer dialog-based confirmation for destructive actions instead of native browser `alert` or `confirm`.
-- Buttons should follow the existing variants in [components/ui/button.tsx](/root/Gad/web/Apps/xmanager/components/ui/button.tsx).
-- Cards, badges, and page headers should visually align with [components/ui/card.tsx](/root/Gad/web/Apps/xmanager/components/ui/card.tsx), [components/ui/badge.tsx](/root/Gad/web/Apps/xmanager/components/ui/badge.tsx), and [components/shared/page-header.tsx](/root/Gad/web/Apps/xmanager/components/shared/page-header.tsx).
+- Buttons should follow the existing variants in [components/ui/button.tsx](/root/Gad/web/Apps/flow/components/ui/button.tsx).
+- Cards, badges, and page headers should visually align with [components/ui/card.tsx](/root/Gad/web/Apps/flow/components/ui/card.tsx), [components/ui/badge.tsx](/root/Gad/web/Apps/flow/components/ui/badge.tsx), and [components/shared/page-header.tsx](/root/Gad/web/Apps/flow/components/shared/page-header.tsx).
 
 ## Interaction Rules
 

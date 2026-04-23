@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "xmanager-3008",
-      cwd: "/root/Gad/web/Apps/xmanager",
+      cwd: "/root/Gad/web/Apps/flow",
       script: "node_modules/next/dist/bin/next",
       args: "start -p 3008",
       interpreter: "node",
@@ -16,7 +16,7 @@ module.exports = {
     },
     {
       name: "xmanager-dev-3018",
-      cwd: "/root/Gad/web/Apps/xmanager",
+      cwd: "/root/Gad/web/Apps/flow",
       script: "node_modules/next/dist/bin/next",
       args: "dev -p 3018 --hostname 127.0.0.1",
       interpreter: "node",

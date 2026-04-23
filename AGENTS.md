@@ -35,9 +35,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Password: `Cial8YnyXl8YRCiX+jJCnBq/4WHMSJty`
 
 ### Current env files
-- Production local env reference: `/root/Gad/web/Apps/xmanager/.env`
-- Development local env reference: `/root/Gad/web/Apps/xmanager/.env.development`
-- PM2 config: `/root/Gad/web/Apps/xmanager/ecosystem.config.cjs`
+- Production local env reference: `/root/Gad/web/Apps/flow/.env`
+- Development local env reference: `/root/Gad/web/Apps/flow/.env.development`
+- PM2 config: `/root/Gad/web/Apps/flow/ecosystem.config.cjs`
 
 ### Important app behavior
 - The app is environment-aware through `lib/auth-path.ts` and `next.config.ts`.
@@ -50,7 +50,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ### Nginx notes
 - Live prod Nginx config is outside the repo at `/etc/nginx/sites-available/devgadbadr.me`
 - Live dev HTTPS Nginx config is currently in `/etc/nginx/sites-available/default`
-- Repo reference template for prod host: `/root/Gad/web/Apps/xmanager/infra/nginx/flow.devgadbadr.me.conf`
+- Repo reference template for prod host: `/root/Gad/web/Apps/flow/infra/nginx/flow.devgadbadr.me.conf`
 
 ### Operational cautions
 - Do not remove the dev `/flow` base-path behavior unless explicitly requested.

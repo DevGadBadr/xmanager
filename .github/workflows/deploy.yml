@@ -24,9 +24,8 @@ jobs:
                     script: |
                         export NVM_DIR="$HOME/.nvm"
                         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-                        cd /root/Gad/web/Apps/xmanager
+                        cd /root/Gad/web/Apps/flow
                         git fetch origin
                         git reset --hard origin/main
                         pnpm exec prisma migrate deploy
                         ./scripts/deploy.sh
-
